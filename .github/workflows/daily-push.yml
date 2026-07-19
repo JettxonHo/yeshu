@@ -1,0 +1,38 @@
+name: 野薯每日推送(V1-a)
+
+on:
+  schedule:
+    # UTC 00:00 = 北京 08:00(spec §11.4)
+    # 注:GitHub Actions 对 public 仓库的 cron 有已知延迟(几分钟到几十分钟),
+    # 接受;V0 的 Cowork task 是准时备份,两者并行到 V0 达标后 Cowork 退役。
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}  # 允许手动触发,便于验证
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 拉今日待办 + 构造卡片 + 推送飞书
+        env:
+          # GH_PAT = 用户的 Classic PAT(scope: project + repo),不能用 Actions 自带 GITHUB_TOKEN(无 project scope)
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_LOGIN: ${{ secrets.GITHUB_LOGIN }}
+          GITHUB_PROJECT_NUMBER: ${{ secrets.GITHUB_PROJECT_NUMBER }}
+          LARK_APP_ID: ${{ secrets.LARK_APP_ID }}
+          LARK_APP_SECRET: ${{ secrets.LARK_APP_SECRET }}
+          LARK_OPEN_ID: ${{ secrets.LARK_OPEN_ID }}
+        run: |
+          python scripts/fetch_data.py > /tmp/todos.json
+          echo "待办数:$(python -c 'import json;print(len(json.load(open("/tmp/todos.json"))))')"
+          python scripts/build_card.py < /tmp/todos.json > /tmp/card.json
+          python scripts/push_lark.py < /tmp/card.json
