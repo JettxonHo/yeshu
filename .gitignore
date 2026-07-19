@@ -1,0 +1,10 @@
+.env
+.env.local
+.env.*.local
+*.secret
+secrets/
+node_modules/
+.wrangler/
+__pycache__/
+*.pyc
+.DS_Store
