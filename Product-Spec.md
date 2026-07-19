@@ -658,7 +658,7 @@ cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/St
 
 | 阶段 | 时间 | 内容 | 成功标准 |
 |---|---|---|---|
-| **V0 · 验证期** | 本周,30 分钟 | Cowork scheduled task + lark-cli,只做每日推送 | 连续 **7 天**打开推送 |
+| **V0 · 验证期** | 本周,30 分钟 | **零代码**(行为验证):Cowork scheduled task + lark-cli,Cowork 定时启动 Claude 会话即时代码,只推每日 P0,不写脚本/Worker | 连续 **7 天**打开推送 |
 | **V1 · 单向闭环** | 2 周 | Cloudflare Worker + GitHub Actions,加 /today 和 /add | 14 天 /add **≥ 10 张** Idea |
 | **V2 · 双向闭环** | 1 个月 | 卡片按钮、状态切换、Stuck 推送 | **66 天**按钮完成 **≥ 30 次** |
 | **V3 · 内容闭环** | 2 个月 | 飞书云文档写作子系统 | 首篇 Show 发布 |
@@ -675,12 +675,14 @@ cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/St
 
 ### 14.3 开发顺序(MVP · C 方案)
 
+> 注:本节是 **V1 起** 的开发策略(写代码建系统)。**V0** 是独立的前置行为验证(零代码,见 §14.1),先于本节——V0 用 Cowork 即时代码验证"你会看推送",通过后才进本节的系统建设。
+
 两边并行:
 - Worker 做 /add 命令(实时记录)
 - Actions 做每日推送(定时反馈)
 - 两者通过 GitHub Projects 数据同步
 
-**第一周目标**:跑通最小闭环——每日推送 + /add 命令。
+**第一周目标**(指 **V1 的第一周**,不含 V0):跑通最小闭环——每日推送(Actions 正式系统)+ /add 命令(Worker)。
 
 ---
 
