@@ -92,7 +92,7 @@
 - **测试**:连续 7 天观察飞书 08:00 是否收到推送;Cowork 任务运行日志可查
 - **工作量**:部署 ~30 分钟(spec §14.1);使用验证 7 天
 - **实际字段简化**:项目 #1 是 GitHub 默认模板(只有 Status: Todo/In Progress/Done),V0 用 `Status=Todo` 当今日待办;spec §4.3 的 Priority/Type/Effort 字段在 **Phase 2(V1-b `/add`)** 时配置
-- **执行证据**:Cowork task `yeshu-v0-daily-push` 已建(cron `0 8`,实际 08:02 触发);端到端验证通过(GraphQL 拉 3 张待办 + 飞书卡片 `code=0`)
+- **执行证据**:V0 用 Cowork task 验证链路通(GraphQL 拉 3 张待办 + 飞书卡片 `code=0`);**V1-a 达标后 V0 task 已暂停(2026-07-20)**,每日推送交给 GitHub Actions(Phase 1,免费)。7 天行为验证用 Actions 推送继续
 - **状态**:⏳ 进行中(7 天观察)
 
 ---
