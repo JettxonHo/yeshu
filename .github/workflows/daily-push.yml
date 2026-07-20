@@ -26,8 +26,8 @@ jobs:
         env:
           # GH_PAT = 用户的 Classic PAT(scope: project + repo),不能用 Actions 自带 GITHUB_TOKEN(无 project scope)
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          GITHUB_LOGIN: ${{ secrets.GITHUB_LOGIN }}
-          GITHUB_PROJECT_NUMBER: ${{ secrets.GITHUB_PROJECT_NUMBER }}
+          GITHUB_LOGIN: ${{ secrets.YESHU_LOGIN }}
+          GITHUB_PROJECT_NUMBER: ${{ secrets.YESHU_PROJECT_NUMBER }}
           LARK_APP_ID: ${{ secrets.LARK_APP_ID }}
           LARK_APP_SECRET: ${{ secrets.LARK_APP_SECRET }}
           LARK_OPEN_ID: ${{ secrets.LARK_OPEN_ID }}
