@@ -22,7 +22,7 @@
 |---|---|---|---|---|---|
 | 基线 | 初始化 | 项目骨架 + 安全配置 + GitHub 仓库 | — | — | ✅ |
 | **0** | **V0** | **零代码 Cowork 行为验证**:每天 08:02 推今日待办,验证"你会看推送" | 基线 | 30 min + 7 天验证 | ⏳ |
-| 1 | V1-a | GitHub Actions 推送系统(把 V0 即时代码正式化) | 0 | 3–5 天 | ⬜ |
+| 1 | V1-a | GitHub Actions 推送系统(把 V0 即时代码正式化) | 0 | 3–5 天 | ⏸ |
 | 2 | V1-b | Worker 实时层 + `/add` + `/today` + 统一卡片构造器(完成 V1) | 1 | 5–7 天 | ⬜ |
 | 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | 5–7 天 | ⬜ |
 | 4 | V2-b | Stuck/P0 算法 + 周三体检推送(完成 V2) | 3 | 3–5 天 | ⬜ |
@@ -111,7 +111,8 @@
 - **依赖**:Phase 0(V0 验证通过才值得投入建系统)
 - **测试**:`act -W .github/workflows/daily-push.yml`;端到端飞书收到推送;`python -m py_compile scripts/*.py`
 - **工作量**:3–5 天
-- **状态**:⬜
+- **阻塞(2026-07-20)**:飞书 contact API 要「通讯录权限范围」含目标用户(企业管理员级配置),`batch_get_id` 查不到 open_id → `push_lark` 无法发 p2p。代码已就绪(commit `1857b99`,py_compile + fetch/build_card 端到端均过),配好通讯录范围后改 `push_lark.py` 的 `receive_id` 即可 resume
+- **状态**:⏸ 暂停(待飞书通讯录权限范围配置)
 
 > 说明:`analyze.py`(Stuck/P0 复杂算法)仍延到 Phase 4(V2-b),V1-a 只做最小 P0 选择,放进 `build_card.py`。
 
