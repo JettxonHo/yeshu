@@ -1,8 +1,0 @@
-name = "yeshu-worker"
-main = "src/index.ts"
-compatibility_date = "2026-07-20"
-
-# 敏感凭据用 `wrangler secret put` 配(不写这里):
-#   GITHUB_TOKEN / GITHUB_LOGIN / GITHUB_PROJECT_NUMBER
-#   LARK_APP_ID / LARK_APP_SECRET / LARK_OPEN_ID / LARK_ENCRYPT_KEY
-#   AI_PROVIDER / AI_BASE_URL / AI_MODEL / AI_API_KEY

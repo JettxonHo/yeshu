@@ -1,46 +1,29 @@
-import { Hono } from "hono";
+import { serve } from "@hono/node-server";
+import "dotenv/config"; // 本地读 .env;阿里云 FC 用平台环境变量
+import { createApp } from "./app";
 import type { Env } from "./types";
-import { isChallenge, verifyToken } from "./lib/verify";
-import { handleAdd } from "./commands/add";
-import { handleToday } from "./commands/today";
 
-const app = new Hono<{ Bindings: Env }>();
+/**
+ * 入口(阿里云 FC Web 函数 / 本地 Node)。
+ * 方案 A:从 process.env 构造 env 对象,注入 app;lib/commands 不改。
+ */
+function loadEnv(): Env {
+  return {
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN ?? "",
+    GITHUB_LOGIN: process.env.GITHUB_LOGIN ?? "",
+    GITHUB_PROJECT_NUMBER: process.env.GITHUB_PROJECT_NUMBER ?? "",
+    LARK_APP_ID: process.env.LARK_APP_ID ?? "",
+    LARK_APP_SECRET: process.env.LARK_APP_SECRET ?? "",
+    LARK_OPEN_ID: process.env.LARK_OPEN_ID ?? "",
+    LARK_VERIFICATION_TOKEN: process.env.LARK_VERIFICATION_TOKEN ?? "",
+    AI_PROVIDER: process.env.AI_PROVIDER,
+    AI_BASE_URL: process.env.AI_BASE_URL,
+    AI_MODEL: process.env.AI_MODEL,
+    AI_API_KEY: process.env.AI_API_KEY,
+  };
+}
 
-app.get("/", (c) => c.text("野薯(Yeshu)Worker 运行中 🥔"));
-
-/** 飞书事件订阅 webhook */
-app.post("/webhook", async (c) => {
-  const body = await c.req.json();
-
-  // 1. URL 验证(challenge):配 webhook 时原样返回
-  if (isChallenge(body)) {
-    return c.json({ challenge: body.challenge });
-  }
-
-  // 2. Verification Token 校验
-  if (!verifyToken(body, c.env)) {
-    return c.json({ error: "invalid token" }, 401);
-  }
-
-  // 3. 命令路由:im.message.receive_v1(用户发文本消息给 bot)
-  const eventType = body?.header?.event_type;
-  const msg = body?.event?.message;
-  const senderOpenId = body?.event?.sender?.sender_id?.open_id;
-  if (eventType === "im.message.receive_v1" && msg?.message_type === "text" && senderOpenId) {
-    let text = "";
-    try {
-      text = JSON.parse(msg.content).text ?? "";
-    } catch {
-      text = "";
-    }
-    if (/^\s*\/add\b/i.test(text)) {
-      await handleAdd(c.env, senderOpenId, text);
-    } else if (/^\s*\/today\b/i.test(text)) {
-      await handleToday(c.env, senderOpenId);
-    }
-  }
-
-  return c.json({ ok: true });
+const port = Number(process.env.PORT) || 9000; // FC Web 函数默认监听 9000
+serve({ fetch: createApp(loadEnv()).fetch, port }, (info) => {
+  console.log(`野薯 Worker 监听 http://localhost:${info.port}`);
 });
-
-export default app;

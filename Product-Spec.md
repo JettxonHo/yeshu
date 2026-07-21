@@ -523,15 +523,17 @@ Anchor Root/
 
 | 组件 | 选择 |
 |---|---|
-| Worker 框架 | TypeScript + **Hono** |
-| Worker 部署 | wrangler + GitHub Actions |
+| Worker 框架 | TypeScript + **Hono**(@hono/node-server) |
+| Worker 部署 | 阿里云 FC 3.0(Serverless Devs `s deploy`) |
 | Actions 脚本 | **Python** |
 | GitHub API | GraphQL v4 |
 | 飞书操作 | **lark-cli** |
 | AI Provider | **DeepSeek** + OpenAI 兼容抽象 |
-| 缓存 | Cloudflare KV |
-| Secret | GitHub Secrets + wrangler secret |
+| 缓存 | 阿里云(Tablestore / Redis),V2+ 按需 |
+| Secret | GitHub Secrets + FC 环境变量(Serverless Devs) |
 | GitHub PAT | **Classic Token**(Fine-grained 不支持 Projects V2) |
+
+> **迁移说明(2026-07-20)**:Worker 原定 Cloudflare Workers,因 `workers.dev` 国内 DNS 污染(飞书 webhook 入网超时)改阿里云 FC 3.0。代码仍是 Hono + TS(`@hono/node-server`),`worker/` 源码不变(只改入口 + env 读取),GitHub Actions 每日推送(V1-a)不受影响。Cloudflare 代码保留在 git 历史,可回退。
 
 ### 11.3 项目结构
 
