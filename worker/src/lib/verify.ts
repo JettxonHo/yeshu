@@ -9,10 +9,12 @@ import type { Env } from "../types";
  * https://open.feishu.cn/document/server-docs/event-subscription-guide/event-subscription-configure-/encrypt-key-encryption-configuration-case
  */
 
-/** Verification Token 校验 */
+/** Verification Token 校验(fail-closed) */
 export function verifyToken(body: any, env: Env): boolean {
   const expected = env.LARK_VERIFICATION_TOKEN;
-  if (!expected) return true; // 未配 token 则跳过(仅本地调试,生产必配)
+  // token 未配/为空 → 一律拒绝。anonymous 触发器下若放行 = 完全无鉴权。
+  // 必填校验在 loadEnv→validateEnv(冷启动):漏配时函数起不来,根本走不到这里。
+  if (!expected) return false;
   const token = body?.header?.token ?? body?.token;
   return token === expected;
 }
