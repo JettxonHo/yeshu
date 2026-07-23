@@ -2,19 +2,22 @@
   "name": "yeshu-worker",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
+    "build": "esbuild --bundle --outfile=./dist/index.js --platform=node --target=node20 --format=cjs ./src/fc.ts",
+    "deploy": "s deploy -y",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
     "dotenv": "^16.4.0",
-    "hono": "^4.6.0"
+    "hono": "^4.6.0",
+    "hono-alibaba-cloud-fc3-adapter": "^1.0.2"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "esbuild": "^0.28.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }

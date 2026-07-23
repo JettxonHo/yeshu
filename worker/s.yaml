@@ -1,0 +1,39 @@
+edition: 3.0.0
+name: yeshu
+access: default
+
+vars:
+  region: cn-hangzhou
+
+resources:
+  yeshu_worker:
+    component: fc3
+    props:
+      region: ${vars.region}
+      functionName: yeshu-worker
+      description: 野薯 V1-b Worker(/add /today 飞书命令)
+      runtime: nodejs20
+      handler: index.handler
+      code: ./dist          # 仅 esbuild 打包产物(单文件,不含 node_modules/.env)
+      timeout: 10          # 默认 3 秒会杀 /add(GraphQL+飞书叠冷启动可能 >3s)
+      memorySize: 512
+      cpu: 0.35
+      diskSize: 512
+      environmentVariables:
+        GITHUB_TOKEN: ${env(GITHUB_TOKEN)}
+        GITHUB_LOGIN: ${env(GITHUB_LOGIN)}
+        GITHUB_PROJECT_NUMBER: ${env(GITHUB_PROJECT_NUMBER)}
+        LARK_APP_ID: ${env(LARK_APP_ID)}
+        LARK_APP_SECRET: ${env(LARK_APP_SECRET)}
+        LARK_OPEN_ID: ${env(LARK_OPEN_ID)}
+        LARK_VERIFICATION_TOKEN: ${env(LARK_VERIFICATION_TOKEN)}
+        AI_PROVIDER: ${env(AI_PROVIDER)}
+        AI_BASE_URL: ${env(AI_BASE_URL)}
+        AI_MODEL: ${env(AI_MODEL)}
+        AI_API_KEY: ${env(AI_API_KEY)}
+      triggers:
+        - triggerName: http-trigger
+          triggerType: http
+          triggerConfig:
+            authType: anonymous
+            methods: ['POST', 'GET']

@@ -1,8 +1,8 @@
 # 野薯(Yeshu)· Development Plan
 
-> **版本**:1.1(2026-07-20 修订)
-> **本次修订**:V0 重新定义为**零代码 Cowork 行为验证**(原误写为 GitHub Actions+Python);Phase 重排,项目初始化移作基线
-> **状态**:dev-planner 产出,待进 Phase 0(V0)
+> **版本**:1.2(2026-07-24 修订)
+> **本次修订**:V1-b(Worker 实时层)完成并迁阿里云 FC 3.0;Phase 2 ✅,项目进入 V1 行为观察期
+> **状态**:dev-builder · Phase 2 ✅ → 待 V1 行为达标进 Phase 3
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -23,7 +23,7 @@
 | 基线 | 初始化 | 项目骨架 + 安全配置 + GitHub 仓库 | — | — | ✅ |
 | **0** | **V0** | **零代码 Cowork 行为验证**:每天 08:02 推今日待办,验证"你会看推送" | 基线 | 30 min + 7 天验证 | ⏳ |
 | 1 | V1-a | GitHub Actions 推送系统(把 V0 即时代码正式化) | 0 | 3–5 天 | ✅ |
-| 2 | V1-b | Worker 实时层 + `/add` + `/today` + 统一卡片构造器(完成 V1) | 1 | 5–7 天 | ⬜ |
+| 2 | V1-b | Worker 实时层(阿里云 FC)+ `/add` + `/today` + 统一卡片构造器(完成 V1) | 1 | 5–7 天 | ✅ |
 | 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | 5–7 天 | ⬜ |
 | 4 | V2-b | Stuck/P0 算法 + 周三体检推送(完成 V2) | 3 | 3–5 天 | ⬜ |
 | 5 | V3-a | 飞书云文档写作子系统(`/note` `/draft` `/drafts`) | 4 | 5–7 天 | ⬜ |
@@ -44,9 +44,9 @@
 📊 项目进度检测
 - Product Spec:✅(§14.1/§14.3 已修正:V0 零代码 vs V1 系统建设分清)
 - DEV-PLAN   :✅(本文件 v1.1)
-- 项目代码   :⏳(V0 Cowork task 已建,7 天观察中)
-当前环节:dev-builder · Phase 0(V0 进行中)
-下一步:7 天观察达标 → Phase 1(V1-a 推送系统)
+- 项目代码   :✅(V1-a Actions 推送 + V1-b FC Worker /add /today 均端到端验证通过)
+当前环节:dev-builder · Phase 2(V1-b)✅ 完成,进入 V1 行为观察期
+下一步:V1 行为达标(14 天 /add ≥ 10)→ Phase 3(V2-a 按钮回调 + 状态机)
 ```
 
 ---
@@ -122,23 +122,24 @@
 
 - **目标**:搭 Cloudflare Worker(Hono)实时响应层,实现 `/add`(创建 Idea 卡,AI 标题 + Priority 推断)+ `/today`(展示今日 P0 + Stuck)+ 统一卡片构造器 `cards.ts`。**完成 V1 单向闭环**(spec §14.3 第一周目标)
 - **完成标准**:
-  - [ ] `worker/src/index.ts`:Hono 入口 + 路由
-  - [ ] `worker/src/lib/verify.ts`:飞书签名校验(中间件复用)
-  - [ ] `worker/src/lib/github.ts`:GraphQL 封装(createProjectV2Item + 查询)
-  - [ ] `worker/src/lib/ai.ts`:OpenAI 兼容抽象(spec §11.5)+ 标题生成
-  - [ ] `worker/src/lib/cards.ts`:完整统一模板(§10.2)
-  - [ ] `worker/src/commands/add.ts`:`/add` + Priority 关键词推断(§6.3 Layer 1)
-  - [ ] `worker/src/commands/today.ts`:`/today` 展示今日 P0(最多 3)+ Stuck 最高分 1 张(§7)
-  - [ ] `worker/wrangler.toml` + `worker/tsconfig.json`(`"strict": true`)
-  - [ ] `.github/workflows/deploy-worker.yml`:push 自动部署
-  - [ ] `/add` 响应 < 2 秒(spec §11.6 场景 2)
-  - [ ] 四步走验证(`wrangler dev` + curl + `tsc --noEmit`)
-  - [ ] **V1 成功标准(spec §14.1):14 天 `/add` ≥ 10 张 Idea**
-- **涉及文件**:`worker/src/{index.ts, commands/{add,today}.ts, lib/{verify,github,ai,cards}.ts}`、`worker/wrangler.toml`、`worker/tsconfig.json`、`.github/workflows/deploy-worker.yml`
+  - [x] `worker/src/app.ts`(平台无关 `createApp`)+ `worker/src/fc.ts`(FC handler 入口,`hono-alibaba-cloud-fc3-adapter`)+ `worker/src/index.ts`(本地 dev,`@hono/node-server`)
+  - [x] `worker/src/lib/verify.ts`:Verification Token 校验(Encrypt Key 签名/加密留 V2+)
+  - [x] `worker/src/lib/github.ts`:GraphQL 封装(`addProjectV2DraftIssue` + 查询)
+  - [x] `worker/src/lib/ai.ts`:OpenAI 兼容抽象(spec §11.5)壳子(V1-b 未接 AI 标题生成,留 V2-b)
+  - [x] `worker/src/lib/cards.ts`:统一模板(§10.2)
+  - [x] `worker/src/commands/add.ts`:`/add` 创建 DraftIssue(V1-b 简化:无 Priority 推断,留 V2-b)
+  - [x] `worker/src/commands/today.ts`:`/today` 展示今日待办(Status ∈ Todo/In Progress,最多 5)
+  - [x] `worker/s.yaml`(FC 3.0,Serverless Devs)+ `worker/tsconfig.json`(`"strict": true`)
+  - [x] esbuild 打包(`npm run build` → `dist/index.js` 单文件 CJS)+ `s deploy` 手动部署(原 `wrangler.toml` / `.github/workflows/deploy-worker.yml` 已删)
+  - [x] `/add` / `/today` 端到端验证(FC 线上 curl + 飞书原生,2026-07-24)
+  - [x] 四步走验证(`tsc --noEmit` + esbuild 打包 + FC 线上 curl + 飞书原生 /add /today)
+  - [ ] **V1 成功标准(spec §14.1):14 天 `/add` ≥ 10 张 Idea**(行为观察期,2026-07-24 起)
+- **涉及文件**:`worker/src/{app.ts, fc.ts, index.ts, env.ts, commands/{add,today}.ts, lib/{verify,github,ai,cards}.ts}`、`worker/s.yaml`、`worker/tsconfig.json`、`worker/package.json`(esbuild + FC3 adapter)
 - **依赖**:Phase 1
-- **测试**:`wrangler dev` + curl 模拟 `/add`、`/today` webhook;`tsc --noEmit`
-- **工作量**:5–7 天(Worker + 两命令 + 卡片构造器,较大)
-- **状态**:⬜
+- **测试**:`tsx` 本地 + curl;esbuild 打包 + `s deploy`;FC 线上 curl(GET / + challenge + /today)+ 飞书原生 /add /today
+- **工作量**:5–7 天(Worker + 两命令 + 卡片构造器 + FC 迁移,较大)
+- **完成(2026-07-24)**:Cloudflare Worker 迁阿里云 FC 3.0——官方 `hono-alibaba-cloud-fc3-adapter`(handler 模型,nodejs20 运行时)+ esbuild 单文件 CJS 打包。FC 公网 URL `https://yeshu-worker-ardlcrifom.cn-hangzhou.fcapp.run/webhook`;飞书 Webhook 已切(国内直连无超时)。`/today` 卡片 + `/add` GitHub 建卡均端到端验证通过(用户确认)。**注**:`/add` 实测 ~2.7s,接近飞书 3s 上限,偶发重试去重(按 message_id)留 V2+
+- **状态**:✅ 完成(V1 行为观察期进行中)
 
 ---
 
