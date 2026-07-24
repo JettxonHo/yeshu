@@ -15,6 +15,7 @@ export interface Env {
 }
 
 export interface Todo {
+  itemId: string; // Projects V2 item node id(PVTI_...),按钮 value 用
   title: string;
-  status: string;
+  status: string; // Backlog/Next/Doing/Paused/...
 }

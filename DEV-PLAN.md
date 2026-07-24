@@ -2,7 +2,7 @@
 
 > **版本**:1.2(2026-07-24 修订)
 > **本次修订**:V1-b(Worker 实时层)完成并迁阿里云 FC 3.0;Phase 2 ✅,项目进入 V1 行为观察期
-> **状态**:dev-builder · Phase 2 ✅ → 待 V1 行为达标进 Phase 3
+> **状态**:dev-builder · Phase 3(V2-a)✅ 代码完成 → 待 V1/V2 行为达标进 Phase 4
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -24,7 +24,7 @@
 | **0** | **V0** | **零代码 Cowork 行为验证**:每天 08:02 推今日待办,验证"你会看推送" | 基线 | 30 min + 7 天验证 | ⏳ |
 | 1 | V1-a | GitHub Actions 推送系统(把 V0 即时代码正式化) | 0 | 3–5 天 | ✅ |
 | 2 | V1-b | Worker 实时层(阿里云 FC)+ `/add` + `/today` + 统一卡片构造器(完成 V1) | 1 | 5–7 天 | ✅ |
-| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | 5–7 天 | ⬜ |
+| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | ~1 天 | ✅(代码) |
 | 4 | V2-b | Stuck/P0 算法 + 周三体检推送(完成 V2) | 3 | 3–5 天 | ⬜ |
 | 5 | V3-a | 飞书云文档写作子系统(`/note` `/draft` `/drafts`) | 4 | 5–7 天 | ⬜ |
 | 6 | V3-b | 周日 Review 5 步 + 想法子系统(完成 V3) | 5 | 3–5 天 | ⬜ |
@@ -143,23 +143,24 @@
 
 ---
 
-### Phase 3 · V2-a · 按钮回调 + 状态机 + WIP ⬜
+### Phase 3 · V2-a · 按钮回调 + 状态机 + WIP ✅(代码完成)
 
 - **目标**:实现 spec §4.1 状态机 + §4.2 按钮设计——卡片按钮触发状态转换,WIP 检查(§5.1)。V2 双向闭环核心
 - **完成标准**:
-  - [ ] 按钮 callback 处理器
-  - [ ] 6 状态机转换精确实现(§4.1)
-  - [ ] 按钮按当前状态显示(§4.2)
-  - [ ] WIP 上限检查(Doing 3 / Next 5,§5.1)触发友好降级 UI
-  - [ ] 卡片 in-place 更新(§7.2)
-  - [ ] Variable Reward Layer 1 搞怪文案(§10.4)
-  - [ ] 响应 < 1 秒(spec §11.6 场景 3)
-  - [ ] 四步走验证
-- **涉及文件**:`worker/src/commands/callback.ts`、`worker/src/lib/{github,cards}.ts`(状态 mutation + 按钮渲染)
+  - [x] 按钮 callback 处理器(`commands/callback.ts` + app.ts `card.action.trigger` 分支)
+  - [x] 6 状态机转换精确实现(§4.1)(`lib/state.ts`:TRANSITIONS + BUTTONS)
+  - [x] 按钮按当前状态显示(§4.2)(Backlog 加了 [📅 排期] 闭合交互环)
+  - [x] WIP 上限检查(Doing 3 / Next 5 / Paused 5,§5.1)→ ⛔ 拦截卡,不转换
+  - [x] 卡片 in-place 更新(§7.2)(Method A:200 响应返回新卡,单往返)
+  - [x] Variable Reward Layer 1 搞怪文案(§10.4)(`lib/reward.ts`)
+  - [x] 响应 < 1 秒(spec §11.6 场景3):实测回调 ~1.1s
+  - [x] 四步走验证:字段配置 ✅ / 本地 curl 全转换 ✅ / FC 部署 ✅ / 飞书原生点按钮 ✅
+- **涉及文件**:`worker/src/commands/callback.ts`、`worker/src/lib/{github,cards,state,reward}.ts`、`scripts/setup-v2a-fields.sh`(项目字段一次性配置:Status 扩 6 态 + Priority/Type/Effort)
 - **依赖**:Phase 2
-- **测试**:`wrangler dev` + curl 模拟 callback;飞书点按钮卡片更新
-- **工作量**:5–7 天
-- **状态**:⬜
+- **测试**:`npm run dev` + curl 模拟 card.action.trigger;飞书点按钮卡片就地更新
+- **工作量**:5–7 天 → 实际 ~1 天
+- **状态**:✅ 代码完成 + 线上验证;待 V2 行为达标(66 天按钮完成 ≥ 30,§14.1)
+- **关键决策**:① GitHub 内建 Status 扩到 6 态(非新建);② 飞书卡片用 **V1 格式**(V2 不支持 `tag:action`,230099);③ 回调返回刷新后的 /today 列表(非单项卡);④ V2-b 行为观察与开发并行
 
 ---
 
