@@ -109,17 +109,20 @@ yeshu/
 ├── worker/                # 阿里云 FC 函数(TypeScript + Hono,`s deploy` 部署)
 │   ├── s.yaml             # FC 3.0 部署配置(Serverless Devs)
 │   ├── src/
-│   │   ├── app.ts         # 平台无关 createApp(Hono)
+│   │   ├── app.ts         # 平台无关 createApp(Hono,/webhook 分流 message + card.action.trigger)
 │   │   ├── fc.ts          # FC handler 入口(hono-alibaba-cloud-fc3-adapter)
 │   │   ├── index.ts       # 本地 dev 入口(@hono/node-server)
-│   │   ├── commands/      # 命令处理(/add /today 等)
+│   │   ├── env.ts         # loadEnv + validateEnv(必填 secret 冷启动校验)
+│   │   ├── commands/      # add / today / callback(按钮回调)
 │   │   └── lib/
-│   │       ├── github.ts  # GraphQL 封装
-│   │       ├── lark.ts    # lark-cli 封装
+│   │       ├── github.ts  # GraphQL 封装(字段元数据/状态转换/查询)
+│   │       ├── lark.ts    # 飞书发消息(tenant token + sendCard)
 │   │       ├── ai.ts      # AI 抽象层(OpenAI 兼容)
-│   │       ├── cards.ts   # 飞书卡片 JSON 构造器
-│   │       └── verify.ts  # 飞书签名校验
-├── scripts/               # Python 脚本(Actions 跑)
+│   │       ├── cards.ts   # 飞书卡片 JSON(V1 带按钮)
+│   │       ├── state.ts   # 6 状态机 + 按钮集 + WIP 上限(§4.1/4.2/5.1)
+│   │       ├── reward.ts  # Variable Reward 搞怪文案(§10.4)
+│   │       └── verify.ts  # 飞书 token 校验(fail-closed)
+├── scripts/               # Python(Actions)+ setup-v2a-fields.sh(项目字段一次性配置)
 │   ├── fetch_data.py      # 拉数据
 │   ├── analyze.py         # 聚合分析
 │   ├── build_card.py      # 组装卡片 JSON
