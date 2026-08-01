@@ -102,34 +102,41 @@ agent 打开项目时,**先检测进度,路由到对应环节**:
 
 ```
 yeshu/
-├── .github/workflows/     # GitHub Actions cron 触发
-│   ├── daily-push.yml     # 每日 08:00 推送
-│   ├── wednesday-check.yml# 周三 20:00 体检(Phase 4)
-│   └── weekly-review.yml  # 周日 20:00 review(Phase 6)
-├── worker/                # 阿里云 FC 函数(TypeScript + Hono,`s deploy` 部署)
+├── .github/workflows/
+│   ├── ci.yml             # PR 门禁:worker(typecheck+test+build)+ python(py_compile)— 已存在
+│   ├── daily-push.yml     # 每日 08:00 推送 — 已存在
+│   ├── wednesday-check.yml# 周三 20:00 体检(Phase 4,planned:尚未创建)
+│   └── weekly-review.yml  # 周日 20:00 review(Phase 6,planned:尚未创建)
+├── worker/                # 阿里云 FC 函数(TypeScript + Hono)
 │   ├── s.yaml             # FC 3.0 部署配置(Serverless Devs)
-│   ├── src/
+│   ├── src/               # 测试与源码同名同目录共存(*.test.ts,vitest)
 │   │   ├── app.ts         # 平台无关 createApp(Hono,/webhook 分流 message + card.action.trigger)
+│   │   ├── app.test.ts    # Webhook 路由测试
 │   │   ├── fc.ts          # FC handler 入口(hono-alibaba-cloud-fc3-adapter)
 │   │   ├── index.ts       # 本地 dev 入口(@hono/node-server)
 │   │   ├── env.ts         # loadEnv + validateEnv(必填 secret 冷启动校验)
-│   │   ├── commands/      # add / today / callback(按钮回调)
+│   │   ├── types.ts       # Env / Todo 类型定义
+│   │   ├── commands/      # add / today / callback(按钮回调;含 callback.test.ts)
 │   │   └── lib/
 │   │       ├── github.ts  # GraphQL 封装(字段元数据/状态转换/查询)
 │   │       ├── lark.ts    # 飞书发消息(tenant token + sendCard)
 │   │       ├── ai.ts      # AI 抽象层(OpenAI 兼容)
-│   │       ├── cards.ts   # 飞书卡片 JSON(V1 带按钮)
-│   │       ├── state.ts   # 6 状态机 + 按钮集 + WIP 上限(§4.1/4.2/5.1)
-│   │       ├── reward.ts  # Variable Reward 搞怪文案(§10.4)
-│   │       └── verify.ts  # 飞书 token 校验(fail-closed)
-├── scripts/               # Python(Actions)+ setup-v2a-fields.sh(项目字段一次性配置)
+│   │       ├── cards.ts   # 飞书卡片 JSON(V1 带按钮;含 cards.test.ts)
+│   │       ├── state.ts   # 6 状态机 + 来源矩阵 + 按钮集 + WIP 上限(§4.1/4.2/5.1;含 state.test.ts)
+│   │       ├── reward.ts  # Variable Reward 搞怪文案(§10.4;含 reward.test.ts)
+│   │       └── verify.ts  # 飞书 token 校验(fail-closed;含 verify.test.ts / env.test.ts 在 src/)
+├── scripts/               # Python(Actions)
 │   ├── fetch_data.py      # 拉数据
-│   ├── analyze.py         # 聚合分析
 │   ├── build_card.py      # 组装卡片 JSON
-│   └── push_lark.py       # 推飞书
+│   ├── push_lark.py       # 推飞书
+│   └── analyze.py         # 聚合分析(Phase 4,planned:尚未创建)
 ├── cards/                 # 卡片模板 JSON
 ├── docs/
-│   └── screenshots/       # 关键交互截图(Phase 验证用)
+│   ├── STATUS.md          # 项目当前状态唯一事实页(三轴状态 + 剩余可靠性清单)
+│   ├── HANDOFF.md         # 交接快速开始
+│   ├── migrations/        # 历史迁移记录(一次性脚本已删除,禁止重演)
+│   ├── screenshots/       # 关键交互截图(Phase 验证用)
+│   └── v0-cowork-prompt.md# V0 验证 prompt 留档
 ├── Product-Spec.md        # 产品 spec(单一真相源)
 ├── DEV-PLAN.md            # 开发计划(dev-planner 产出)
 ├── AGENTS.md              # 本文件
@@ -223,15 +230,14 @@ AI_API_KEY=sk-xxx
 
 每个 Phase 完成前必须通过:
 
-### 1. Worker 本地测试 / 部署
+### 1. Worker 本地测试
 ```bash
 cd worker
 npm run dev                       # tsx 跑本地常驻服务(端口 9000)
 # 用 curl 模拟飞书 webhook,测试至少 3 个命令
-
-# 打包 + 部署阿里云 FC(密钥从 ../.env 注入)
-npm run build && set -a && source ../.env && set +a && s deploy -y
 ```
+
+部署动作不在此列——见下文「CI 门禁与部署原则」(只从 main、人工批准)。
 
 ### 2. Actions 本地测试
 ```bash
@@ -250,6 +256,49 @@ act -W .github/workflows/daily-push.yml
 - `tsc --noEmit`(TypeScript 无报错)
 - `python -m py_compile scripts/*.py`(Python 无语法错)
 - `pre-commit run --all-files`(如果装了 pre-commit hook)
+
+---
+
+## CI 门禁与部署原则
+
+### 当前必需检查(本地,与 CI 同构)
+
+```bash
+cd worker
+npm ci
+npm run check        # = typecheck && test && build
+
+cd ..
+python -m py_compile scripts/*.py
+```
+
+### CI 要求
+
+- 门禁定义在 `.github/workflows/ci.yml`,含 **worker**(npm ci → typecheck → test → build)与 **python**(py_compile)两个 Job;
+- **所有指向 main 的 PR 必须通过 worker 与 python 两个 required checks** 才可合并;
+- base 非 main 的 stacked PR 不会自动触发门禁,需 `gh workflow run ci.yml --ref <branch>` 手动触发并等绿后交付审查。
+
+### 禁止事项
+
+- 直接 push main(一律走 PR);
+- 使用 admin bypass 做普通开发;
+- 从 feature branch 部署生产;
+- CI 未通过时部署;
+- 运行已经完成的一次性迁移(如已删除的 `setup-v2a-fields.sh`;字段变更流程见 `docs/migrations/`)。
+
+### 部署原则
+
+- **只从 main 部署**;
+- **人工批准**(凭证只在本地,agent 不执行部署、不读取生产 secret);
+- **记录部署 commit SHA**(与 main tip 核对);
+- 部署后执行 **smoke test**(curl GET / + challenge;飞书原生 /add、/today、按钮流转);
+- 保留**回滚点**:出现异常按上一稳定版本回滚。
+
+当前没有自动生产部署,也没有 staging;不声称存在自动化部署流水线。
+
+### 技术债务
+
+剩余可靠性工作与历史审计项由 **[docs/STATUS.md](docs/STATUS.md)** 统一追踪(「剩余可靠性工作」一节)。本文件与其他文档只引用该清单,不复制第二份状态。
 
 ---
 
