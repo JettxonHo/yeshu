@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """fetch_data.py · 从 GitHub Projects V2 拉今日待办(野薯 V1-a,Phase 1)
 
-从环境变量读凭据,GraphQL 查项目卡片,筛 Status ∈ {Todo, InProgress},
+从环境变量读凭据,GraphQL 查项目卡片,筛 Status ∈ {Backlog, Next, Doing, Paused}
+(六状态模型的活跃状态,与 Worker /today 可见状态一致),
 输出待办列表 JSON 到 stdout,供下游 build_card.py 消费。
 
 环境变量:GITHUB_TOKEN / GITHUB_LOGIN / GITHUB_PROJECT_NUMBER
@@ -16,9 +17,14 @@ import sys
 import requests
 
 GRAPHQL_URL = "https://api.github.com/graphql"
-# V1-a 沿用 V0 的字段简化(项目 #1 是 GitHub 默认模板);
-# spec §4.3 的完整 6 状态 + Priority/Type/Effort 在 Phase 2(V1-b /add)时配置。
-ACTIVE_STATUSES = ("Todo", "In Progress")
+# 项目已迁移六状态模型(Backlog/Next/Doing/Paused/Done/Abandoned)。
+# 每日推送的可见状态与 Worker /today 保持一致:四种活跃状态,Done/Abandoned 不推。
+ACTIVE_STATUSES = (
+    "Backlog",
+    "Next",
+    "Doing",
+    "Paused",
+)
 
 
 def read_env(key: str) -> str:
@@ -36,7 +42,12 @@ def fetch_project_items(token: str, login: str, number: int) -> list[dict]:
             nodes {
               content { ...on DraftIssue { title } ...on Issue { title number url } }
               fieldValues(first: 10) {
-                nodes { ...on ProjectV2ItemFieldSingleSelectValue { name } }
+                nodes {
+                  ...on ProjectV2ItemFieldSingleSelectValue {
+                    name
+                    field { ...on ProjectV2FieldCommon { name } }
+                  }
+                }
               }
             }
           }
@@ -64,15 +75,20 @@ def fetch_project_items(token: str, login: str, number: int) -> list[dict]:
 
 
 def extract_todos(items: list[dict]) -> list[dict]:
-    """筛 ACTIVE_STATUSES 的待办,最多 5 张,返回 [{title, status}]。"""
+    """筛 ACTIVE_STATUSES 的待办,最多 5 张,返回 [{title, status}]。
+
+    只在字段名为 Status 时取其 option name 作为状态;Priority/Type/Effort
+    等其他 Single Select 字段不参与,避免误把它们当成 Status。
+    """
     todos: list[dict] = []
     for it in items:
         content = it.get("content") or {}
         title = content.get("title") or "(无标题)"
         status = ""
         for fv in (it.get("fieldValues") or {}).get("nodes", []):
-            if "name" in fv:
-                status = fv["name"]
+            field = fv.get("field") or {}
+            if field.get("name") == "Status":
+                status = fv.get("name") or ""
         if status in ACTIVE_STATUSES:
             todos.append({"title": title, "status": status})
     return todos[:5]
