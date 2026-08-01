@@ -1,94 +1,73 @@
 # 野薯(Yeshu)项目交接(Handoff)
 
-> 快照时间:2026-07-24。接手前先读:[DEV-PLAN.md](../DEV-PLAN.md)(Phase 状态)→ [Product-Spec.md](../Product-Spec.md)(spec)→ [AGENTS.md](../AGENTS.md)(约定/铁律)。本文件是**当前状态 + 怎么接着干**的快照。
+> 本文件只管"怎么快速接手"。**项目当前状态的唯一事实页是 [docs/STATUS.md](STATUS.md)**——状态冲突时以 STATUS.md 为准。
 
-## 一句话状态
-
-**V2-a(Phase 3)代码完成并已线上部署,PR #2 待 merge。** 下一阶段:V2 行为观察(66 天按钮完成 ≥ 30,spec §14.1)+ Phase 4(应用主页/段位成就/多维表格看板)。
-
-## 这是什么
-
-ENFP 个人管理飞书应用。任务数据在 **GitHub Projects V2**(GraphQL,真相源),飞书为交互入口。架构:
-
-- **阿里云 FC Worker**(实时交互):`/add` `/today` 文本命令 + **卡片按钮回调**(状态流转)
-- **GitHub Actions**(每日 08:00 推送,V1-a):**尚未启用**(脚本在 `scripts/`,workflow 在 `.github/workflows/daily-push.yml`,V1-b 起暂停)
-- **GitHub Projects V2 #1**:任务真相源(字段已配齐)
-- 飞书云文档:内容真相源(草稿/笔记,V2 才用到)
-
-## 进度(Phase)
-
-| Phase | 内容 | 状态 |
-|---|---|---|
-| V0 | Cowork 零代码托管 | ✅ |
-| V1-b | FC Worker /add /today(单向闭环) | ✅ PR #1 merged(a620c76) |
-| V2-a | 按钮回调 + 6 状态机 + WIP + 搞怪文案 | ✅ 代码+线上部署,**PR #2 OPEN** |
-| Phase 4 | 应用主页 / 段位成就 / 多维表格看板 | ⬜ 下一个 |
-
-## 线上基础设施(现状)
-
-- **FC 函数** `yeshu-worker` @ cn-hangzhou(nodejs20,handler 模型)
-  - URL:`https://yeshu-worker-ardlcrifom.cn-hangzhou.fcapp.run`(webhook = `.../webhook`)
-  - 已部署 V2-a 代码(Python 推送 workflow 未启用)
-- **GitHub Project #1**(JettxonHo,project ID `PVT_kwHODSJQBM4Bd1Sw`)
-  - Status 6 态:Backlog/Next/Doing/Paused/Done/Abandoned(内建字段扩展而来)
-  - Priority(P0–P3)/ Type(Idea/Feature/Bug/Learn/Show)/ Effort(S/M/L/XL):已建
-- **飞书应用** `cli_aad7e549ab385bd8`
-  - 事件订阅:请求地址 = 上面的 FC URL;`im.message.receive_v1` + `card.action.trigger`(自动路由,无单独回调 URL)
-  - 权限:im.message、contact 相关、bot 能力
-
-## 部署 / 开发 / 测试(命令)
+## 1. 快速开始
 
 ```bash
-cd /Users/ketchup/Projects/YESHU/worker
-npm run build                      # esbuild 打包 src/fc.ts → dist/index.js(CJS)
-set -a && source ../.env && set +a # 注入 ${env(KEY)} 到 s.yaml
-s deploy -y                        # 部署 FC(凭证在 ~/.s/access.yaml,alias default)
+git clone <仓库地址> && cd yeshu   # 仓库:GitHub JettxonHo/yeshu
+cp .env.example .env               # 填入真实值(.env 不进 git)
 
-npm run dev                        # 本地 dev(port 9000,tsx)
-node node_modules/typescript/bin/tsc --noEmit   # 类型检查
+cd worker
+npm ci
+npm run check                      # typecheck + test + build 一把过
 
-bash scripts/setup-v2a-fields.sh   # 一次性:GitHub 项目字段配置(只跑一次,createProjectV2Field 不幂等)
+cd ..
+python -m py_compile scripts/*.py
 ```
 
-## 代码结构(worker/src)
+本地起 Worker 调试(可选):`cd worker && npm run dev`(端口 9000,tsx 常驻;curl 模拟 webhook)。
 
-- `app.ts`:createApp,/webhook 按 `header.event_type` 分流(message / card.action.trigger),challenge + fail-closed token 校验
-- `fc.ts`:FC handler 入口(hono-alibaba-cloud-fc3-adapter);`index.ts`:本地 dev(@hono/node-server,port 9000);`env.ts`:loadEnv + validateEnv
-- `commands/`:`add.ts` / `today.ts` / `callback.ts`(按钮回调 → 状态转换 → 返回刷新卡)
-- `lib/`:`github.ts`(字段元数据/状态转换/查询)、`lark.ts`(发消息)、`cards.ts`(V1 带按钮卡)、`state.ts`(6 状态机 + 按钮集 + WIP)、`reward.ts`(搞怪文案)、`verify.ts`、`ai.ts`
+## 2. 当前唯一状态源
 
-## 关键决策 & 坑(重要)
+**[docs/STATUS.md](STATUS.md)**:三轴状态(Engineering / Production / Validation)、main 与 PR 基线 SHA、合并后部署流程、剩余可靠性工作清单。
 
-1. **Cloudflare → 阿里云 FC**:`workers.dev` 国内 DNS 污染,飞书 webhook 入站超时。现 FC 国内直连(Product-Spec §11.2)
-2. **飞书卡片用 V1 格式**:V2(schema 2.0 + body.elements)不支持 `tag:"action"` 按钮(报 230099)。**所有带按钮的卡必须是 V1**(顶层 elements + config.wide_screen)
-3. **Status 扩到 6 态**:`updateProjectV2Field` 会整体替换 options,**必须带上全部现有 option 的 id**,否则清空 item 的 Status 值
-4. **卡片回调**:与消息事件共用 `/webhook`;就地更新用 **Method A**(200 响应返回新卡);回调返回**刷新后的 /today 列表**(非单项卡)
-5. **安全**:`verifyToken` fail-closed(空 token 拒绝)+ `validateEnv` 冷启动校验必填 secret(漏配函数起不来,防静默无鉴权)。`LARK_VERIFICATION_TOKEN` 生产必配(在 .env + .env.example)
-6. **Bash 工具 cwd 会重置到主项目**(Product Recommendation clip,另一仓库):YESHU 的 git 用 `git -C /Users/ketchup/Projects/YESHU`,gh 用 `gh --repo JettxonHo/yeshu`,或命令开头 `cd ...`。`git push | tail` 会掩盖失败码,别在 && 门控里接管道
+任何"现在到哪一步了 / 下一步做什么"的问题,先读它,再动手。
 
-## 已知未决(V2+,记档)
+## 3. 必读顺序
 
-- **`event_id` 去重**:`/add` 偶发超飞书 3s → 飞书重试 → 可能重复建卡(需存 event_id,Tablestore/Redis)
-- `add.ts` 先建卡后反馈(部分失败会「卡已建但提示失败」)
-- `npm run build` 不链 `tsc`;`npm run deploy` 不 build、不注入 env(真流程见上)
-- worker 内 `LARK_OPEN_ID` 死配置;`timingSafeEqual` 加固(token 现 `===` 比较)
+1. [Product-Spec.md](../Product-Spec.md) — 产品决策单一真相源
+2. [docs/STATUS.md](STATUS.md) — 当前状态唯一事实页
+3. [DEV-PLAN.md](../DEV-PLAN.md) — 开发计划(怎么做、Phase 拆解)
+4. [AGENTS.md](../AGENTS.md) — 项目规范与铁律(检查命令 / CI / 部署原则)
 
-## 密钥 / 环境变量
+## 4. 当前开发边界
 
-- `.env`(gitignored,根目录):`GITHUB_TOKEN/LOGIN/PROJECT_NUMBER`、`LARK_APP_ID/SECRET/OPEN_ID/VERIFICATION_TOKEN`、`AI_PROVIDER/BASE_URL/MODEL/API_KEY`
-- 部署凭证:子用户 AccessKey,`s config add` 存 `~/.s/access.yaml`
-- `.env.example` 是模板(可 commit)
+- **架构**:阿里云 FC Worker(Hono;实时 `/add` `/today` + 卡片按钮回调)+ GitHub Actions(每日 08:00 推送)+ GitHub Projects V2(任务真相源)+ 飞书(交互入口)。
+- **工程重点**:Reliability Hardening(幂等 / 分页 / 并发保护 / timeout / 错误脱敏 / 部署回滚)。下一项**不是**应用主页、段位成就、多维表格看板。
+- **工程坑位**(改代码前必读):
+  1. 飞书带按钮卡片**必须用 V1 格式**(顶层 elements + `config.wide_screen`);V2 schema 2.0 不支持 `tag:"action"`(错误码 230099)。
+  2. 卡片回调用 Method A 就地更新(200 响应直接返回新卡,单往返)。
+  3. `verifyToken` fail-closed(token 漏配 / 不符一律拒绝);`validateEnv` 冷启动校验必填 secret,漏配函数起不来。
+  4. Cloudflare Workers 已弃用(`workers.dev` 国内 DNS 污染,飞书入站超时),不要迁回(Product-Spec §11.2)。
+- **行为门槛**:V2-a 合并 ≠ 产品阶段晋级。66 天按钮完成 ≥ 30 次才算 V2 达标(spec §14.1);工程门禁与行为验证分离。
 
-## 已验证能力
+## 5. 本地检查命令
 
-- `/add <内容>` → GitHub 建卡(Backlog/Idea)+ 飞书确认卡
-- `/today` → 分组待办卡(带按钮)
-- 点按钮 → 卡片就地刷新,项在 Backlog/Next/Doing/Paused/Done/Abandoned 间流转
-- Doing/Next/Paused 达上限 → ⛔ 拦截;完成 → 🎉 搞怪文案卡
+```bash
+cd worker
+npm ci
+npm run check
 
-## 接手建议(下一个 agent)
+cd ..
+python -m py_compile scripts/*.py
+```
 
-1. 读 DEV-PLAN / Product-Spec / AGENTS(顺序如上)
-2. merge PR #2(V2-a)→ main 更新
-3. Phase 4 前确认 V1/V2 行为数据(铁律:不达标不进 Phase);Phase 4 做应用主页/段位/多维表格
-4. 改 worker 后:`tsc` → `build` → `deploy` → curl 验证 → 飞书原生验证(四步走,AGENTS §测试)
+CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker + python** 两个 Job,必须全绿。base 非 main 的 stacked PR 不自动触发,需手动 `gh workflow run ci.yml --ref <branch>` 并等绿后再交付审查。
+
+## 6. 部署原则
+
+- **只允许从 main 部署**,不从 feature branch 部署;
+- PR 的 required checks(worker / python)必须通过;
+- 生产部署需要**人工批准**;凭证只在本地(`.env` 与部署工具配置),agent 不执行部署;
+- **记录部署 commit SHA**(与 main tip 核对);
+- 部署后执行 smoke test:curl GET / + challenge;飞书原生 /add、/today、按钮全流转;
+- 出现异常按**上一稳定版本回滚**。
+
+当前**没有**自动生产部署,也**没有** staging 环境:部署是人工动作,按上述原则执行,不声称存在自动化流水线。
+
+## 7. 已知风险入口
+
+- **剩余可靠性债务**:见 [docs/STATUS.md](STATUS.md) "剩余可靠性工作" 一节(event_id 幂等、GraphQL 分页、WIP 并发保护、timeout/retry、错误脱敏、部署回滚、daily-push TS 化、Encrypt Key 评估)。以该清单为准,本文件不复制。
+- **历史字段迁移**:`docs/migrations/`(GitHub Projects 字段六状态化已于 2026-07-24 完成;一次性脚本已删除,禁止重演)。
+- **审计过程稿**:`docs/audits/` 为本地未入库工作区,不是事实依据。
