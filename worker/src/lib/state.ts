@@ -32,6 +32,22 @@ export const TRANSITIONS: Record<ActionName, StateName> = {
   abandon: "Abandoned",
 };
 
+/**
+ * action → 允许的来源状态(服务端强制)。
+ * 按钮卡片可能被用户留存很久,回调必须按服务端当前状态校验来源,
+ * 否则旧卡片能把已终态的任务"复活"(如旧 Done 卡再点完成)。
+ */
+export const LEGAL_SOURCES: Record<ActionName, readonly StateName[]> = {
+  schedule: ["Backlog"],
+  defer: ["Next"],
+  start: ["Next"],
+  complete: ["Doing"],
+  pause: ["Doing"],
+  resume: ["Paused"],
+  demote: ["Paused"],
+  abandon: ["Backlog", "Next", "Doing", "Paused"],
+};
+
 /** action 的中文动词(反馈文案用) */
 export const ACTION_VERB: Record<ActionName, string> = {
   schedule: "排期",
@@ -93,5 +109,20 @@ export const STATUS_META: Record<StateName, { emoji: string; color: string }> = 
 };
 
 export function isStateName(s: string): s is StateName {
-  return s in STATUS_META;
+  return Object.prototype.hasOwnProperty.call(STATUS_META, s);
+}
+
+/** action 守卫(own-property 判断,避免 toString/constructor 等原型键混入) */
+export function isActionName(s: string): s is ActionName {
+  return Object.prototype.hasOwnProperty.call(TRANSITIONS, s);
+}
+
+/**
+ * 服务端转换裁决:合法 source + action → 目标状态;任一非法 → null。
+ * 回调在 mutation 前必须先过这一关(来源校验),再查 WIP。
+ */
+export function getTransitionTarget(source: string, action: string): StateName | null {
+  if (!isStateName(source) || !isActionName(action)) return null;
+  if (!LEGAL_SOURCES[action].includes(source)) return null;
+  return TRANSITIONS[action];
 }

@@ -59,7 +59,9 @@ function actionRow(itemId: string, title: string, status: StateName): Json | nul
         tag: "button",
         text: { tag: "plain_text", content: b.label },
         type: b.type,
-        value: { action: b.action, itemId, title }, // 回调原样带回
+        // 仅携带 action + itemId;不再嵌入 title(title 以服务端为准,减少客户端可篡改数据)。
+        // 已发出的旧卡片仍可能携带 title,回调端必须容忍并忽略。
+        value: { action: b.action, itemId },
       };
       if (b.action === "abandon") {
         btn.confirm = {
