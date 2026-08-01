@@ -1,0 +1,47 @@
+name: CI
+
+# PR 门禁 + main 推送检查。只读检查与构建:不读生产 Secret,不部署。
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker:
+    name: worker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          # 与 esbuild target=node20 / @types/node 20 / 阿里云 FC runtime nodejs20 对齐
+          node-version: 20
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+
+  python:
+    name: python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          # 与 daily-push.yml 的 Python 版本保持一致
+          python-version: "3.11"
+      # py_compile 只做语法编译,不导入第三方依赖,无需安装 requirements.txt;
+      # 不发起任何需要生产凭据的真实 API 请求。
+      - run: python -m py_compile scripts/*.py
