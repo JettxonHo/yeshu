@@ -91,11 +91,15 @@ export async function fetchTodos(env: Env): Promise<Todo[]> {
   const todos: Todo[] = [];
   for (const it of items) {
     const title = it.content?.title ?? "(无标题)";
-    let status = "";
+    let status = "", type = "", effort = "", priority = "";
     for (const fv of it.fieldValues?.nodes ?? []) {
-      if (fv.field?.name === "Status") status = fv.name; // 按字段名精确匹配(修旧「取第一个」bug)
+      const fn = fv.field?.name;
+      if (fn === "Status") status = fv.name;
+      else if (fn === "Type") type = fv.name;
+      else if (fn === "Effort") effort = fv.name;
+      else if (fn === "Priority") priority = fv.name;
     }
-    if (VISIBLE_STATUSES.includes(status)) todos.push({ itemId: it.id, title, status });
+    if (VISIBLE_STATUSES.includes(status)) todos.push({ itemId: it.id, title, status, type, effort, priority });
   }
   return todos;
 }
