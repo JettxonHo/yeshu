@@ -1,7 +1,7 @@
 # 野薯(Yeshu)· Development Plan
 
 > **版本**:1.3(2026-08-02 修订)
-> **本次修订**:V2-a 代码完成,PR #2 Draft / CI green(153 项测试、服务端来源状态校验);项目当前状态统一由 [docs/STATUS.md](docs/STATUS.md) 追踪,本文件只做开发拆解
+> **本次修订**:V2-a 代码完成,PR #2 Draft / CI green(168 项测试、服务端来源状态校验);项目当前状态统一由 [docs/STATUS.md](docs/STATUS.md) 追踪,本文件只做开发拆解
 > **状态**:dev-builder · Phase 3(V2-a)✅ 代码完成 / ⏳ 待最终收口、合并 main 与从 main 部署 → Reliability Hardening → 行为达标后进 Phase 4(V2-b)
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
@@ -46,7 +46,7 @@
 - DEV-PLAN   :✅(本文件 v1.3)
 - 项目代码   :✅(V1-a 推送 merged;V1-b Worker merged;V2-a 代码完成,PR #2 Draft / CI green)
 当前环节:dev-builder · V2-a 收口期
-  - Engineering :V2-a 代码完成;PR #2 OPEN / Draft / CI 双绿(worker + python);153 项测试;服务端来源状态校验已实现
+  - Engineering :V2-a 代码完成;PR #2 OPEN / Draft / CI 双绿(worker + python);168 项测试(含 15 项 Webhook 路由测试);服务端来源状态校验已实现
   - Production  :线上 FC 运行 V2-a 早期版本;来源状态校验修复(PR-B)尚未确认部署
   - Validation  :行为数据 collecting(V2 门槛:66 天按钮完成 ≥ 30,spec §14.1)
 下一步:PR #2 最终收口 → 合并 main → 从 main 部署并验证 → Reliability Hardening → 行为达标后才进入 V2-b(Phase 4)
@@ -162,7 +162,7 @@
 - **依赖**:Phase 2
 - **测试**:`npm run dev` + curl 模拟 card.action.trigger;飞书点按钮卡片就地更新
 - **工作量**:5–7 天 → 实际 ~1 天
-- **状态**:✅ 代码完成 / ⏳ 未合并、未最终部署。PR #2(Draft,base = main)head = 0496ea2,CI 双绿,153 项测试,已含服务端来源状态校验(PR-B:拒绝过期卡片与终态复活、不信任客户端 title)。生产 FC 仍为合并前早期版本,PR-B 修复**尚未确认部署**;合并后必须从 main 重新部署并核对 commit SHA(流程见 docs/STATUS.md)。行为数据仍 collecting(V2 门槛:66 天按钮完成 ≥ 30,§14.1)
+- **状态**:✅ 代码完成 / ⏳ 未合并、未最终部署。PR #2 为 Draft、base = main,实时 head 以 GitHub PR #2 为准;CI 双绿,168 项测试,已含服务端来源状态校验(PR-B:拒绝过期卡片与终态复活、不信任客户端 title)与 Webhook 路由测试。生产 FC 仍为合并前早期版本,PR-B 修复**尚未确认部署**;合并后必须从 main 重新部署并核对 commit SHA(流程见 docs/STATUS.md)。行为数据仍 collecting(V2 门槛:66 天按钮完成 ≥ 30,§14.1)
 - **关键决策**:① GitHub 内建 Status 扩到 6 态(非新建);② 飞书卡片用 **V1 格式**(V2 不支持 `tag:action`,230099);③ 回调返回刷新后的 /today 列表(非单项卡);④ V2-b 行为观察与开发并行
 
 ---
