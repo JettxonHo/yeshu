@@ -20,14 +20,14 @@
 
 ## 关键事实
 
-1. main 当前是 `dd01ef4`(最近一次合入:PR 门禁基线 + 每日推送六状态热修)。
-2. PR #2(V2-a 交互状态机)当前 head 是 `0496ea2`,base = main,state = OPEN / Draft。
+1. main 当前是 `dd01ef4`(最近一次合入:PR 门禁基线 + 每日推送六状态热修)。这是 **2026-08-02 收口阶段的快照**(PR #6 合入的是 feature branch,不改变 main);PR #2 合并后,本页的 main SHA 与工程状态**必须人工同步更新**,本页不会自动更新。
+2. PR #2(V2-a 交互状态机)当前分支为 feat/v2a-interactive,base = main,state = OPEN / Draft;**实时 head 以 GitHub PR #2 为准**。本次最终收口开始时的审查基线为 `0496ea2`。
 3. PR #2 已有:
    - CI(worker / python 双 Job,base = main 的 PR 自动触发,required checks);
-   - 153 项测试(state 76 / callback 36 / cards 19 / reward 7 / verify 9 / env 6);
+   - 168 项测试(state 76 / callback 36 / cards 19 / reward 7 / verify 9 / env 6 / app routing 15;app routing 测试由本次最终收口加入);
    - 服务端来源状态校验(拒绝过期卡片与终态复活、不信任客户端 title、来源校验先于 WIP)。
 4. 生产 FC 已运行 V2-a 的**早期版本**(合并前的功能代码)。
-5. PR-B 的来源状态校验(已含于 `0496ea2`)**尚未确认部署**——线上版本与该修复是否一致,未经 commit SHA 核对。
+5. PR #2 当前分支已包含服务端来源状态校验(PR-B);该修复**尚未通过部署 commit SHA 确认进入生产**——线上版本与该修复是否一致,未经核对,不得假定已部署。
 6. **PR #2 合并前,不得从旧 main 部署 Worker**:旧 main 的 `worker/src/lib/github.ts` 仍是 Todo / In Progress 双状态模型,与生产项目的六状态字段不兼容,部署即故障。
 7. PR #2 合并后的正确部署流程:
    1. 从 main 构建(`cd worker && npm ci && npm run build`);
