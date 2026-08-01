@@ -3,6 +3,7 @@ import type { Env } from "./types";
 import { isChallenge, verifyToken } from "./lib/verify";
 import { handleAdd } from "./commands/add";
 import { handleToday } from "./commands/today";
+import { handleCardCallback } from "./commands/callback";
 
 /**
  * 创建 Hono app(platform-agnostic)。
@@ -28,6 +29,10 @@ export function createApp(env: Env): Hono {
 
     // 3. 命令路由:im.message.receive_v1
     const eventType = body?.header?.event_type;
+    if (eventType === "card.action.trigger") {
+      // 卡片按钮回调 → 状态转换,返回新卡(Method A 就地更新)
+      return c.json(await handleCardCallback(env, body));
+    }
     const msg = body?.event?.message;
     const senderOpenId = body?.event?.sender?.sender_id?.open_id;
     if (eventType === "im.message.receive_v1" && msg?.message_type === "text" && senderOpenId) {

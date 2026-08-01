@@ -1,8 +1,8 @@
 # 野薯(Yeshu)· Development Plan
 
-> **版本**:1.2(2026-07-24 修订)
-> **本次修订**:V1-b(Worker 实时层)完成并迁阿里云 FC 3.0;Phase 2 ✅,项目进入 V1 行为观察期
-> **状态**:dev-builder · Phase 2 ✅ → 待 V1 行为达标进 Phase 3
+> **版本**:1.3(2026-08-02 修订)
+> **本次修订**:V2-a 代码完成,PR #2 Draft / CI green(168 项测试、服务端来源状态校验);项目当前状态统一由 [docs/STATUS.md](docs/STATUS.md) 追踪,本文件只做开发拆解
+> **状态**:dev-builder · Phase 3(V2-a)✅ 代码完成 / ⏳ 待最终收口、合并 main 与从 main 部署 → Reliability Hardening → 行为达标后进 Phase 4(V2-b)
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -24,7 +24,7 @@
 | **0** | **V0** | **零代码 Cowork 行为验证**:每天 08:02 推今日待办,验证"你会看推送" | 基线 | 30 min + 7 天验证 | ⏳ |
 | 1 | V1-a | GitHub Actions 推送系统(把 V0 即时代码正式化) | 0 | 3–5 天 | ✅ |
 | 2 | V1-b | Worker 实时层(阿里云 FC)+ `/add` + `/today` + 统一卡片构造器(完成 V1) | 1 | 5–7 天 | ✅ |
-| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | 5–7 天 | ⬜ |
+| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | ~1 天 | ✅(代码)/ ⏳ 未合并、未最终部署 |
 | 4 | V2-b | Stuck/P0 算法 + 周三体检推送(完成 V2) | 3 | 3–5 天 | ⬜ |
 | 5 | V3-a | 飞书云文档写作子系统(`/note` `/draft` `/drafts`) | 4 | 5–7 天 | ⬜ |
 | 6 | V3-b | 周日 Review 5 步 + 想法子系统(完成 V3) | 5 | 3–5 天 | ⬜ |
@@ -42,11 +42,14 @@
 
 ```
 📊 项目进度检测
-- Product Spec:✅(§14.1/§14.3 已修正:V0 零代码 vs V1 系统建设分清)
-- DEV-PLAN   :✅(本文件 v1.1)
-- 项目代码   :✅(V1-a Actions 推送 + V1-b FC Worker /add /today 均端到端验证通过)
-当前环节:dev-builder · Phase 2(V1-b)✅ 完成,进入 V1 行为观察期
-下一步:V1 行为达标(14 天 /add ≥ 10)→ Phase 3(V2-a 按钮回调 + 状态机)
+- Product Spec:✅(产品决策单一真相源)
+- DEV-PLAN   :✅(本文件 v1.3)
+- 项目代码   :✅(V1-a 推送 merged;V1-b Worker merged;V2-a 代码完成,PR #2 Draft / CI green)
+当前环节:dev-builder · V2-a 收口期
+  - Engineering :V2-a 代码完成;PR #2 OPEN / Draft / CI 双绿(worker + python);168 项测试(含 15 项 Webhook 路由测试);服务端来源状态校验已实现
+  - Production  :线上 FC 运行 V2-a 早期版本;来源状态校验修复(PR-B)尚未确认部署
+  - Validation  :行为数据 collecting(V2 门槛:66 天按钮完成 ≥ 30,spec §14.1)
+下一步:PR #2 最终收口 → 合并 main → 从 main 部署并验证 → Reliability Hardening → 行为达标后才进入 V2-b(Phase 4)
 ```
 
 ---
@@ -138,28 +141,29 @@
 - **依赖**:Phase 1
 - **测试**:`tsx` 本地 + curl;esbuild 打包 + `s deploy`;FC 线上 curl(GET / + challenge + /today)+ 飞书原生 /add /today
 - **工作量**:5–7 天(Worker + 两命令 + 卡片构造器 + FC 迁移,较大)
-- **完成(2026-07-24)**:Cloudflare Worker 迁阿里云 FC 3.0——官方 `hono-alibaba-cloud-fc3-adapter`(handler 模型,nodejs20 运行时)+ esbuild 单文件 CJS 打包。FC 公网 URL `https://yeshu-worker-ardlcrifom.cn-hangzhou.fcapp.run/webhook`;飞书 Webhook 已切(国内直连无超时)。`/today` 卡片 + `/add` GitHub 建卡均端到端验证通过(用户确认)。**注**:`/add` 实测 ~2.7s,接近飞书 3s 上限,偶发重试去重(按 message_id)留 V2+
+- **完成(2026-07-24)**:Cloudflare Worker 迁阿里云 FC 3.0——官方 `hono-alibaba-cloud-fc3-adapter`(handler 模型,nodejs20 运行时)+ esbuild 单文件 CJS 打包。飞书 Webhook 已切到 FC(国内直连无超时;生产 URL 见本地运维记录,不进仓库)。`/today` 卡片 + `/add` GitHub 建卡均端到端验证通过(用户确认)。**注**:`/add` 实测 ~2.7s,接近飞书 3s 上限,偶发重试去重(按 message_id)留 V2+
 - **状态**:✅ 完成(V1 行为观察期进行中)
 
 ---
 
-### Phase 3 · V2-a · 按钮回调 + 状态机 + WIP ⬜
+### Phase 3 · V2-a · 按钮回调 + 状态机 + WIP ✅(代码完成)
 
 - **目标**:实现 spec §4.1 状态机 + §4.2 按钮设计——卡片按钮触发状态转换,WIP 检查(§5.1)。V2 双向闭环核心
 - **完成标准**:
-  - [ ] 按钮 callback 处理器
-  - [ ] 6 状态机转换精确实现(§4.1)
-  - [ ] 按钮按当前状态显示(§4.2)
-  - [ ] WIP 上限检查(Doing 3 / Next 5,§5.1)触发友好降级 UI
-  - [ ] 卡片 in-place 更新(§7.2)
-  - [ ] Variable Reward Layer 1 搞怪文案(§10.4)
-  - [ ] 响应 < 1 秒(spec §11.6 场景 3)
-  - [ ] 四步走验证
-- **涉及文件**:`worker/src/commands/callback.ts`、`worker/src/lib/{github,cards}.ts`(状态 mutation + 按钮渲染)
+  - [x] 按钮 callback 处理器(`commands/callback.ts` + app.ts `card.action.trigger` 分支)
+  - [x] 6 状态机转换精确实现(§4.1)(`lib/state.ts`:TRANSITIONS + BUTTONS)
+  - [x] 按钮按当前状态显示(§4.2)(Backlog 加了 [📅 排期] 闭合交互环)
+  - [x] WIP 上限检查(Doing 3 / Next 5 / Paused 5,§5.1)→ ⛔ 拦截卡,不转换
+  - [x] 卡片 in-place 更新(§7.2)(Method A:200 响应返回新卡,单往返)
+  - [x] Variable Reward Layer 1 搞怪文案(§10.4)(`lib/reward.ts`)
+  - [x] 响应 < 1 秒(spec §11.6 场景3):实测回调 ~1.1s
+  - [x] 四步走验证:字段配置 ✅ / 本地 curl 全转换 ✅ / FC 部署 ✅ / 飞书原生点按钮 ✅
+- **涉及文件**:`worker/src/commands/callback.ts`、`worker/src/lib/{github,cards,state,reward}.ts`;字段迁移已于 2026-07-24 完成,记录见 `docs/migrations/2026-07-24-v2a-fields.md`(一次性脚本已删除,不得重演)
 - **依赖**:Phase 2
-- **测试**:`wrangler dev` + curl 模拟 callback;飞书点按钮卡片更新
-- **工作量**:5–7 天
-- **状态**:⬜
+- **测试**:`npm run dev` + curl 模拟 card.action.trigger;飞书点按钮卡片就地更新
+- **工作量**:5–7 天 → 实际 ~1 天
+- **状态**:✅ 代码完成 / ⏳ 未合并、未最终部署。PR #2 为 Draft、base = main,实时 head 以 GitHub PR #2 为准;CI 双绿,168 项测试,已含服务端来源状态校验(PR-B:拒绝过期卡片与终态复活、不信任客户端 title)与 Webhook 路由测试。生产 FC 仍为合并前早期版本,PR-B 修复**尚未确认部署**;合并后必须从 main 重新部署并核对 commit SHA(流程见 docs/STATUS.md)。行为数据仍 collecting(V2 门槛:66 天按钮完成 ≥ 30,§14.1)
+- **关键决策**:① GitHub 内建 Status 扩到 6 态(非新建);② 飞书卡片用 **V1 格式**(V2 不支持 `tag:action`,230099);③ 回调返回刷新后的 /today 列表(非单项卡);④ V2-b 行为观察与开发并行
 
 ---
 
@@ -280,13 +284,12 @@
 
 ## 6. 下一步
 
-按 AGENTS.md §项目状态检测,当前路由到 **dev-builder · Phase 0(V0 零代码行为验证)**。
+当前路由:**dev-builder · V2-a 收口 → Reliability Hardening**。按序执行,不跳步:
 
-**Phase 0 执行前置**(需你介入,我无法代劳):
-1. `.env` 填真实值:`grep TODO_FILL .env` 清零
-2. GitHub Projects V2 项目里有标 P0 的卡(否则推送无内容)
-3. `lark-cli auth status` 通过
-
-前置就绪后,我用 `mcp__scheduled-tasks__create_scheduled_task` 创建 cron `0 8 * * *` 的 Cowork 任务(prompt 拉 P0 + lark-cli 推送),进入 7 天验证。
+1. **PR #2 最终收口**:文档 / 迁移安全 / Webhook 路由测试对齐(stacked PR,base = feat/v2a-interactive;CI 手动触发并等绿);
+2. **合并 main**:由主控审查后合并 PR #2(CI worker / python 必须全绿;Draft → Ready 由主控操作);
+3. **从 main 部署并验证**:人工部署 → 核对部署 commit SHA → curl smoke test → 飞书原生测试(原则见 AGENTS.md「CI 门禁与部署原则」);
+4. **Reliability Hardening**:event_id 幂等、GraphQL 分页、WIP 并发保护、外部 API timeout/retry、错误脱敏、部署版本与回滚、daily-push TS 化、Encrypt Key 评估(清单以 docs/STATUS.md「剩余可靠性工作」为准);
+5. **达标后才进入 V2-b(Phase 4)**:铁律不变——行为门槛(66 天按钮完成 ≥ 30,spec §14.1)未达标,不启动应用主页、段位成就、多维表格看板等后续形态。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*
