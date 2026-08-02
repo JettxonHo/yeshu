@@ -22,3 +22,28 @@ export interface Todo {
   effort?: string; // S/M/L/XL
   priority?: string; // P0/P1/P2/P3
 }
+
+/**
+ * 飞书 webhook 事件体最小类型(只列 Worker 读取的字段)。
+ * - header.event_id:卡片回调幂等去重键(card: 前缀);
+ * - event.message.message_id:消息命令幂等去重键(message: 前缀)。
+ */
+export interface LarkWebhookBody {
+  type?: string; // "url_verification"(challenge)
+  challenge?: string;
+  schema?: string;
+  header?: {
+    event_id?: string;
+    event_type?: string; // im.message.receive_v1 / card.action.trigger
+    token?: string;
+  };
+  event?: {
+    sender?: { sender_id?: { open_id?: string } };
+    message?: {
+      message_id?: string;
+      message_type?: string; // "text"
+      content?: string; // JSON 字符串,如 {"text":"/add 买牛奶"}
+    };
+    action?: { value?: Record<string, unknown> };
+  };
+}
