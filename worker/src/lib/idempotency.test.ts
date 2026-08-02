@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   IDEMPOTENCY_TTL_SECONDS,
   claimIdempotencyKey,
@@ -87,5 +87,38 @@ describe("claimIdempotencyKey", () => {
     await expect(
       claimIdempotencyKey({ store, key: "message:om_z", owner: "o1", nowMs: 1 }),
     ).rejects.toBe(boom);
+  });
+
+  it("非法 TTL 一律拒绝(即使直接注入也不得生成非法 claim)", async () => {
+    const store = new MemoryAtomicKeyStore();
+    const spy = vi.spyOn(store, "tryAcquire");
+    const bad: unknown[] = [0, -1, -604_800, 1.5, NaN, Infinity, -Infinity, "3600", null];
+    for (const ttl of bad) {
+      await expect(
+        claimIdempotencyKey({
+          store,
+          key: "message:om_bad_ttl",
+          owner: "o1",
+          nowMs: 1_000,
+          ttlSeconds: ttl as number,
+        }),
+      ).rejects.toThrow(/ttlSeconds/);
+    }
+    expect(spy).not.toHaveBeenCalled(); // 非法 TTL 不得触达 store
+  });
+
+  it("TTL 导致 expiresAtMs 溢出安全整数 → 拒绝", async () => {
+    const store = new MemoryAtomicKeyStore();
+    const spy = vi.spyOn(store, "tryAcquire");
+    await expect(
+      claimIdempotencyKey({
+        store,
+        key: "message:om_overflow",
+        owner: "o1",
+        nowMs: Number.MAX_SAFE_INTEGER - 100,
+        ttlSeconds: 1,
+      }),
+    ).rejects.toThrow(/expiresAtMs/);
+    expect(spy).not.toHaveBeenCalled();
   });
 });

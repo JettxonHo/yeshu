@@ -51,17 +51,34 @@ export interface ClaimIdempotencyKeyInput {
  * Claim 幂等 key。acquired = 本次 delivery 应继续执行业务 Handler;
  * duplicate = 已处理过,跳过全部 Handler 与 mutation。
  * 存储后端异常 → 抛错,由调用方 fail-closed(绝不降级为「继续 mutation」)。
+ *
+ * TTL 在本地校验(不只依赖 env parser):正整数秒、expiresAtMs 为安全整数且
+ * 大于 nowMs——即使 AppDependencies 直接注入非法值,也不得生成非法 claim。
  */
 export async function claimIdempotencyKey(
   input: ClaimIdempotencyKeyInput,
 ): Promise<IdempotencyClaimStatus> {
-  const ttlSeconds = input.ttlSeconds ?? IDEMPOTENCY_TTL_SECONDS;
+  // 仅 undefined 回退默认值;显式传入的 null / 非法值一律校验拒绝(不用 ??,
+  // 那会把 null 静默替换为默认 TTL,生成「看似合法」的 claim)。
+  const ttlSeconds = input.ttlSeconds === undefined ? IDEMPOTENCY_TTL_SECONDS : input.ttlSeconds;
+  if (
+    typeof ttlSeconds !== "number" ||
+    !Number.isFinite(ttlSeconds) ||
+    !Number.isInteger(ttlSeconds) ||
+    ttlSeconds <= 0
+  ) {
+    throw new Error("claimIdempotencyKey: ttlSeconds 必须为正整数(单位:秒)");
+  }
+  const expiresAtMs = input.nowMs + ttlSeconds * 1000;
+  if (!Number.isSafeInteger(expiresAtMs) || !(expiresAtMs > input.nowMs)) {
+    throw new Error("claimIdempotencyKey: expiresAtMs 超出安全整数范围或不大于 nowMs");
+  }
   const result = await input.store.tryAcquire({
     key: input.key,
     owner: input.owner,
     kind: "idempotency",
     nowMs: input.nowMs,
-    expiresAtMs: input.nowMs + ttlSeconds * 1000,
+    expiresAtMs,
   });
   return result.acquired ? "acquired" : "duplicate";
 }

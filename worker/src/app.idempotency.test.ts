@@ -78,6 +78,18 @@ function failingStore(): AtomicKeyStore {
   };
 }
 
+/** 模拟损坏行:适配器抛 AtomicKeyStoreCorruptRowError(脱敏)。 */
+function corruptRowStore(): AtomicKeyStore {
+  return {
+    tryAcquire: vi.fn(async () => {
+      throw new Error("AtomicKeyStore: 幂等 claim 行损坏 (missing-expires-at)", {
+        cause: "corrupt",
+      });
+    }),
+    release: vi.fn(async () => false),
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -247,6 +259,33 @@ describe("只读与前置路由:零 store 访问", () => {
     await post(messageBody("随便聊聊", "om_chat_1"));
 
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("corrupt row fail-closed(损坏行不进入 Handler,响应脱敏)", () => {
+  it("/add:store 抛损坏行错误 → 503,零 Handler,响应不含 key / 损坏细节", async () => {
+    const { post } = makeApp({ atomicKeyStore: corruptRowStore() });
+    const res = await post(messageBody("/add x", "om_corrupt_1"));
+
+    expect(res.status).toBe(503);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json).toEqual({ error: "idempotency_store_unavailable" });
+    const raw = JSON.stringify(json);
+    expect(raw).not.toContain("om_corrupt_1");
+    expect(raw).not.toContain("missing-expires-at");
+    expect(raw).not.toContain("claim 行损坏");
+    expect(handleAdd).not.toHaveBeenCalled();
+  });
+
+  it("card callback:store 抛损坏行错误 → 200 安全 toast,零 Handler", async () => {
+    const { post } = makeApp({ atomicKeyStore: corruptRowStore() });
+    const res = await post(cardBody({ action: "start", itemId: "PVTI_C" }, "ev_corrupt_1"));
+
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json).toEqual({ toast: { type: "error", content: "系统暂时无法确认操作,请稍后重试" } });
+    expect(JSON.stringify(json)).not.toContain("ev_corrupt_1");
+    expect(handleCardCallback).not.toHaveBeenCalled();
   });
 });
 

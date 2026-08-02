@@ -132,6 +132,14 @@ describe("MemoryAtomicKeyStore: 并发与入参校验", () => {
     await expect(store.release("", "owner-a")).rejects.toThrow(/key/);
   });
 
+  it("release 空 owner → 抛错(与 Tablestore 适配器契约统一)", async () => {
+    const store = new MemoryAtomicKeyStore();
+    await store.tryAcquire(input({ owner: "owner-a" }));
+    await expect(store.release("message:om_1", "")).rejects.toThrow(/owner/);
+    // 抛错不得影响 claim
+    expect(store.size).toBe(1);
+  });
+
   it("每个测试新建实例,状态不跨用例泄漏(本用例起始 size=0)", () => {
     expect(new MemoryAtomicKeyStore().size).toBe(0);
   });

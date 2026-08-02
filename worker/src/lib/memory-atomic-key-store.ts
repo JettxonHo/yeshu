@@ -41,6 +41,9 @@ export class MemoryAtomicKeyStore implements AtomicKeyStore {
     if (!key) {
       throw new Error("AtomicKeyStore: key 不允许为空");
     }
+    if (!owner) {
+      throw new Error("AtomicKeyStore: owner 不允许为空");
+    }
     const existing = this.entries.get(key);
     if (!existing || existing.owner !== owner) {
       return false;
