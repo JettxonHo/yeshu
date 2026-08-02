@@ -17,7 +17,8 @@
     "@hono/node-server": "^1.13.0",
     "dotenv": "^16.4.0",
     "hono": "^4.6.0",
-    "hono-alibaba-cloud-fc3-adapter": "^1.0.2"
+    "hono-alibaba-cloud-fc3-adapter": "^1.0.2",
+    "tablestore": "^5.6.5"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
