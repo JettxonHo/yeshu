@@ -109,7 +109,7 @@ function fullTablestoreRecord(): Record<string, string> {
 }
 
 describe("parseTablestoreEnv", () => {
-  it("全部配置齐全(无 STS)→ 解析成功且无 stsToken 字段", () => {
+  it("全部配置齐全 → 解析成功(仅五个字段)", () => {
     const config = parseTablestoreEnv(fullTablestoreRecord());
     expect(config).toEqual({
       endpoint: "https://example.cn-hangzhou.ots-inner.aliyuncs.com",
@@ -118,12 +118,19 @@ describe("parseTablestoreEnv", () => {
       accessKeyId: "FAKE_AK_ID",
       accessKeySecret: "FAKE_AK_SECRET",
     });
-    expect(config.stsToken).toBeUndefined();
   });
 
-  it("STS token 可选:配置即透传", () => {
-    const record = { ...fullTablestoreRecord(), TABLESTORE_STS_TOKEN: "FAKE_STS" };
-    expect(parseTablestoreEnv(record).stsToken).toBe("FAKE_STS");
+  it("静态 STS 不受支持:即便环境配置了 TABLESTORE_STS_TOKEN 也不读取、不进入 config", () => {
+    const record = { ...fullTablestoreRecord(), TABLESTORE_STS_TOKEN: "FAKE_STS_SHOULD_NOT_BE_READ" };
+    const config = parseTablestoreEnv(record);
+    expect(Object.keys(config).sort()).toEqual([
+      "accessKeyId",
+      "accessKeySecret",
+      "endpoint",
+      "instanceName",
+      "tableName",
+    ]);
+    expect((config as { stsToken?: unknown }).stsToken).toBeUndefined();
   });
 
   it("endpoint 缺失 → 抛错且仅列变量名", () => {

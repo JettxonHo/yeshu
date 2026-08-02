@@ -39,7 +39,6 @@ resources:
         TABLESTORE_TABLE_NAME: ${env(TABLESTORE_TABLE_NAME)}
         TABLESTORE_ACCESS_KEY_ID: ${env(TABLESTORE_ACCESS_KEY_ID)}
         TABLESTORE_ACCESS_KEY_SECRET: ${env(TABLESTORE_ACCESS_KEY_SECRET)}
-        TABLESTORE_STS_TOKEN: ${env(TABLESTORE_STS_TOKEN)}
       triggers:
         - triggerName: http-trigger
           triggerType: http

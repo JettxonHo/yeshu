@@ -45,23 +45,26 @@ export function validateEnv(env: Env): void {
 
 // ---------- 幂等后端(Tablestore)配置 ----------
 
-/** Tablestore 幂等键表连接配置(解析后结构;凭证不进入通用 Env 类型)。 */
+/**
+ * Tablestore idempotency key table connection configuration (struct after parsing; credentials are not included in the generic Env type).
+ *
+ * 当前唯一批准的生产凭证模式:专用最小权限 RAM 用户 AccessKey。
+ * 静态 STS token 不受支持(无自动刷新机制;延期为独立设计项,见运行手册)。
+ */
 export interface TablestoreConfig {
   endpoint: string;
   instanceName: string;
   tableName: string;
   accessKeyId: string;
   accessKeySecret: string;
-  /** 可选 STS 临时凭证 token。 */
-  stsToken?: string;
 }
 
-/** 幂等 claim TTL 默认值(秒):7 天。表级 TTL 只做长期清理,实时判断以此为据。 */
+/** 幂等 claim TTL 默认值(秒):7 天。表级 TTL 只负责长期清理,实时判断以此为据。 */
 export const IDEMPOTENCY_TTL_SECONDS_DEFAULT = 7 * 24 * 60 * 60;
 
 /**
  * 解析 Tablestore 配置。错误只列变量名,绝不输出变量值(脱敏)。
- * AccessKey ID / Secret 必须成对;TABLESTORE_STS_TOKEN 可选。
+ * AccessKey ID / Secret 必须成对;严禁主账号 AccessKey(最小权限 RAM)。
  */
 export function parseTablestoreEnv(
   record: Readonly<Record<string, string | undefined>>,
@@ -71,7 +74,6 @@ export function parseTablestoreEnv(
   const tableName = (record.TABLESTORE_TABLE_NAME ?? "").trim();
   const accessKeyId = (record.TABLESTORE_ACCESS_KEY_ID ?? "").trim();
   const accessKeySecret = (record.TABLESTORE_ACCESS_KEY_SECRET ?? "").trim();
-  const stsToken = (record.TABLESTORE_STS_TOKEN ?? "").trim();
 
   // AK 成对校验先于 missing 汇总:只配一半是配置错误,单独报错更明确
   if (!!accessKeyId !== !!accessKeySecret) {
@@ -87,17 +89,10 @@ export function parseTablestoreEnv(
   if (!accessKeyId) missing.push("TABLESTORE_ACCESS_KEY_ID");
   if (!accessKeySecret) missing.push("TABLESTORE_ACCESS_KEY_SECRET");
   if (missing.length) {
-    throw new Error(`缺少必填环境变量:${missing.join(", ")}`);
+    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
   }
 
-  return {
-    endpoint,
-    instanceName,
-    tableName,
-    accessKeyId,
-    accessKeySecret,
-    ...(stsToken ? { stsToken } : {}),
-  };
+  return { endpoint, instanceName, tableName, accessKeyId, accessKeySecret };
 }
 
 /**
