@@ -31,6 +31,14 @@ resources:
         AI_BASE_URL: ${env(AI_BASE_URL)}
         AI_MODEL: ${env(AI_MODEL)}
         AI_API_KEY: ${env(AI_API_KEY)}
+        # 幂等后端(Tablestore):仅变量透传,不在本文件配置值;表与 RAM 身份人工准备
+        IDEMPOTENCY_BACKEND: ${env(IDEMPOTENCY_BACKEND)}
+        IDEMPOTENCY_TTL_SECONDS: ${env(IDEMPOTENCY_TTL_SECONDS)}
+        TABLESTORE_ENDPOINT: ${env(TABLESTORE_ENDPOINT)}
+        TABLESTORE_INSTANCE_NAME: ${env(TABLESTORE_INSTANCE_NAME)}
+        TABLESTORE_TABLE_NAME: ${env(TABLESTORE_TABLE_NAME)}
+        TABLESTORE_ACCESS_KEY_ID: ${env(TABLESTORE_ACCESS_KEY_ID)}
+        TABLESTORE_ACCESS_KEY_SECRET: ${env(TABLESTORE_ACCESS_KEY_SECRET)}
       triggers:
         - triggerName: http-trigger
           triggerType: http

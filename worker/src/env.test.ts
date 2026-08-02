@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadEnv, validateEnv } from "./env";
+import {
+  IDEMPOTENCY_TTL_SECONDS_DEFAULT,
+  assertTablestoreBackend,
+  loadEnv,
+  parseIdempotencyTtlSeconds,
+  parseTablestoreEnv,
+  validateEnv,
+} from "./env";
 import type { Env } from "./types";
 
 /**
@@ -86,5 +93,122 @@ describe("loadEnv", () => {
       vi.stubEnv(k, "");
     }
     expect(() => validateEnv(loadEnv())).toThrow(/缺少必填环境变量/);
+  });
+});
+
+// ---------- 幂等后端(Tablestore)配置解析 ----------
+
+function fullTablestoreRecord(): Record<string, string> {
+  return {
+    TABLESTORE_ENDPOINT: "https://example.cn-hangzhou.ots-inner.aliyuncs.com",
+    TABLESTORE_INSTANCE_NAME: "example-instance",
+    TABLESTORE_TABLE_NAME: "idempotency_keys",
+    TABLESTORE_ACCESS_KEY_ID: "FAKE_AK_ID",
+    TABLESTORE_ACCESS_KEY_SECRET: "FAKE_AK_SECRET",
+  };
+}
+
+describe("parseTablestoreEnv", () => {
+  it("全部配置齐全 → 解析成功(仅五个字段)", () => {
+    const config = parseTablestoreEnv(fullTablestoreRecord());
+    expect(config).toEqual({
+      endpoint: "https://example.cn-hangzhou.ots-inner.aliyuncs.com",
+      instanceName: "example-instance",
+      tableName: "idempotency_keys",
+      accessKeyId: "FAKE_AK_ID",
+      accessKeySecret: "FAKE_AK_SECRET",
+    });
+  });
+
+  it("静态 STS 不受支持:即便环境配置了 TABLESTORE_STS_TOKEN 也不读取、不进入 config", () => {
+    const record = { ...fullTablestoreRecord(), TABLESTORE_STS_TOKEN: "FAKE_STS_SHOULD_NOT_BE_READ" };
+    const config = parseTablestoreEnv(record);
+    expect(Object.keys(config).sort()).toEqual([
+      "accessKeyId",
+      "accessKeySecret",
+      "endpoint",
+      "instanceName",
+      "tableName",
+    ]);
+    expect((config as { stsToken?: unknown }).stsToken).toBeUndefined();
+  });
+
+  it("endpoint 缺失 → 抛错且仅列变量名", () => {
+    const record = fullTablestoreRecord();
+    delete record.TABLESTORE_ENDPOINT;
+    expect(() => parseTablestoreEnv(record)).toThrow(/TABLESTORE_ENDPOINT/);
+  });
+
+  it("instance 缺失 → 抛错且仅列变量名", () => {
+    const record = fullTablestoreRecord();
+    delete record.TABLESTORE_INSTANCE_NAME;
+    expect(() => parseTablestoreEnv(record)).toThrow(/TABLESTORE_INSTANCE_NAME/);
+  });
+
+  it("table 缺失 → 抛错且仅列变量名", () => {
+    const record = fullTablestoreRecord();
+    delete record.TABLESTORE_TABLE_NAME;
+    expect(() => parseTablestoreEnv(record)).toThrow(/TABLESTORE_TABLE_NAME/);
+  });
+
+  it("AccessKey 只配置一半(ID)→ 抛错并点名两个变量", () => {
+    const record = fullTablestoreRecord();
+    delete record.TABLESTORE_ACCESS_KEY_SECRET;
+    expect(() => parseTablestoreEnv(record)).toThrow(/TABLESTORE_ACCESS_KEY_ID/);
+    expect(() => parseTablestoreEnv(record)).toThrow(/TABLESTORE_ACCESS_KEY_SECRET/);
+  });
+
+  it("AccessKey 只配置一半(Secret)→ 抛错", () => {
+    const record = fullTablestoreRecord();
+    delete record.TABLESTORE_ACCESS_KEY_ID;
+    expect(() => parseTablestoreEnv(record)).toThrow(/必须成对存在/);
+  });
+
+  it("错误信息脱敏:不泄露任何配置值", () => {
+    const record = fullTablestoreRecord();
+    delete record.TABLESTORE_ENDPOINT;
+    try {
+      parseTablestoreEnv(record);
+      expect.unreachable("应抛错");
+    } catch (e) {
+      const msg = (e as Error).message;
+      expect(msg).not.toContain("FAKE_AK_ID");
+      expect(msg).not.toContain("FAKE_AK_SECRET");
+      expect(msg).not.toContain("example-instance");
+      expect(msg).not.toContain("idempotency_keys");
+    }
+  });
+});
+
+describe("assertTablestoreBackend", () => {
+  it('IDEMPOTENCY_BACKEND = "tablestore" → 通过', () => {
+    expect(() => assertTablestoreBackend({ IDEMPOTENCY_BACKEND: "tablestore" })).not.toThrow();
+  });
+
+  it("缺失 → 抛错(生产不得静默回退 Memory)", () => {
+    expect(() => assertTablestoreBackend({})).toThrow(/IDEMPOTENCY_BACKEND/);
+  });
+
+  it('其他取值(如 "memory")→ 抛错', () => {
+    expect(() => assertTablestoreBackend({ IDEMPOTENCY_BACKEND: "memory" })).toThrow(/IDEMPOTENCY_BACKEND/);
+  });
+});
+
+describe("parseIdempotencyTtlSeconds", () => {
+  it("未配置 → 默认 7 天", () => {
+    expect(parseIdempotencyTtlSeconds({})).toBe(IDEMPOTENCY_TTL_SECONDS_DEFAULT);
+    expect(IDEMPOTENCY_TTL_SECONDS_DEFAULT).toBe(604_800);
+  });
+
+  it("合法正整数 → 采用", () => {
+    expect(parseIdempotencyTtlSeconds({ IDEMPOTENCY_TTL_SECONDS: "3600" })).toBe(3600);
+  });
+
+  it("非法值(0 / 负数 / 小数 / 非数字)→ 抛错", () => {
+    for (const bad of ["0", "-1", "1.5", "abc"]) {
+      expect(() => parseIdempotencyTtlSeconds({ IDEMPOTENCY_TTL_SECONDS: bad })).toThrow(
+        /IDEMPOTENCY_TTL_SECONDS/,
+      );
+    }
   });
 });
