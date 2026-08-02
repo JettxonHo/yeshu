@@ -30,7 +30,7 @@ declare module "tablestore" {
     columnName: string;
     columnValue: string | number | Long;
     comparator: number;
-    /** 列缺失时条件是否通过(默认 true)。 */
+    /** 列缺失时条件是否通过(默认 true;本仓库一律显式置 false)。 */
     passIfMissing: boolean;
     latestVersionOnly: boolean;
   }
@@ -47,15 +47,16 @@ declare module "tablestore" {
     toNumber(): number;
   }
 
+  /**
+   * 官方文档的 Client 构造字段(samples/client.js):accessKeyId /
+   * secretAccessKey / endpoint / instancename(全小写)。本仓库只使用
+   * 这一组字段;不使用等价的旧别名(accessKeySecret / securityToken),
+   * 也不使用静态 STS token(无刷新机制,见运行手册)。
+   */
   export interface ClientConfig {
     accessKeyId: string;
-    /** 与 secretAccessKey 等价,二选一。 */
-    accessKeySecret?: string;
-    secretAccessKey?: string;
-    /** 可选 STS 临时凭证 token。 */
-    stsToken?: string;
+    secretAccessKey: string;
     endpoint: string;
-    /** 实例名(注意 SDK 键名为全小写 instancename)。 */
     instancename: string;
   }
 
@@ -72,4 +73,16 @@ declare module "tablestore" {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     deleteRow(params: any): Promise<any>;
   }
+
+  /**
+   * 协议编解码器(SDK 顶层公开导出)。仅供 tablestore-sdk-contract.test.ts
+   * 作为 protobufjs 跨 major override 的兼容性证据使用(纯内存,无网络);
+   * 生产代码不得依赖(属 SDK 内部协议层,非长期稳定接口)。
+   */
+  export const encoder: {
+    encode(operation: string, params: unknown): unknown;
+  };
+  export const decoder: {
+    decode(operation: string, body: Uint8Array): unknown;
+  };
 }

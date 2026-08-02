@@ -18,12 +18,15 @@ export function createMemoryAtomicKeyStore(): AtomicKeyStore {
 /**
  * 生产后端:Tablestore。client 由工厂用解析后的配置构造;
  * 适配器与 app 层都不读 process.env、不接触凭证。
+ *
+ * 构造字段使用官方文档命名(secretAccessKey,见 samples/client.js)。
+ * 当前唯一批准的生产凭证模式:专用最小权限 RAM 用户 AccessKey;
+ * 不支持静态 STS token(无自动刷新,见运行手册)。
  */
 export function createTablestoreAtomicKeyStore(config: TablestoreConfig): AtomicKeyStore {
   const client = new TableStore.Client({
     accessKeyId: config.accessKeyId,
-    accessKeySecret: config.accessKeySecret,
-    ...(config.stsToken ? { stsToken: config.stsToken } : {}),
+    secretAccessKey: config.accessKeySecret,
     endpoint: config.endpoint,
     instancename: config.instanceName,
   });

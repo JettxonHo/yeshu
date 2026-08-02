@@ -29,6 +29,9 @@ jobs:
           cache: npm
           cache-dependency-path: worker/package-lock.json
       - run: npm ci
+      # 生产依赖安全门禁:moderate 及以上即失败(硬性要求 critical=0 / high=0,目标 moderate=0)。
+      # audit 固定查询官方 registry(部分镜像未实现 security 端点);不接受 --force / 忽略退出码。
+      - run: npm run security:audit
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
