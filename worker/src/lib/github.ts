@@ -94,13 +94,43 @@ export async function fetchProjectMeta(env: Env): Promise<ProjectMeta> {
 /** /today 展示的非终态(带按钮可操作);Done/Abandoned 不展示 */
 const VISIBLE_STATUSES = ["Backlog", "Next", "Doing", "Paused"];
 
+interface ProjectItemsConnection<T> {
+  nodes: T[];
+  pageInfo?: {
+    hasNextPage: boolean;
+    endCursor: string | null;
+  };
+}
+
+/** 拉完 ProjectV2.items connection；fieldValues 保持当前固定窗口,只对 items 分页。 */
+async function fetchAllProjectItems<T>(
+  env: Env,
+  query: string,
+): Promise<T[]> {
+  const items: T[] = [];
+  let after: string | null = null;
+
+  while (true) {
+    const data = await gql(env, "query", query, {
+      login: env.GITHUB_LOGIN,
+      number: projectNumber(env),
+      after,
+    });
+    const connection = data.user.projectV2.items as ProjectItemsConnection<T>;
+    items.push(...(connection.nodes ?? []));
+    if (connection.pageInfo?.hasNextPage !== true) return items;
+    after = connection.pageInfo.endCursor;
+  }
+}
+
 /** 拉 /today 待办(非终态,带 itemId/status 供按钮用) */
 export async function fetchTodos(env: Env): Promise<Todo[]> {
   const query = `
-    query($login: String!, $number: Int!) {
+    query($login: String!, $number: Int!, $after: String) {
       user(login: $login) {
         projectV2(number: $number) {
-          items(first: 50) {
+          items(first: 50, after: $after) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               id
               content { ...on DraftIssue { title } ...on Issue { title } }
@@ -117,11 +147,16 @@ export async function fetchTodos(env: Env): Promise<Todo[]> {
         }
       }
     }`;
-  const data = await gql(env, "query", query, {
-    login: env.GITHUB_LOGIN,
-    number: projectNumber(env),
-  });
-  const items = data.user.projectV2.items.nodes;
+  const items = await fetchAllProjectItems<{
+    id: string;
+    content?: { title?: string } | null;
+    fieldValues?: {
+      nodes?: Array<{
+        name?: string;
+        field?: { name?: string } | null;
+      }>;
+    } | null;
+  }>(env, query);
   const todos: Todo[] = [];
   for (const it of items) {
     const title = it.content?.title ?? "(无标题)";
@@ -131,10 +166,10 @@ export async function fetchTodos(env: Env): Promise<Todo[]> {
       priority = "";
     for (const fv of it.fieldValues?.nodes ?? []) {
       const fn = fv.field?.name;
-      if (fn === "Status") status = fv.name;
-      else if (fn === "Type") type = fv.name;
-      else if (fn === "Effort") effort = fv.name;
-      else if (fn === "Priority") priority = fv.name;
+      if (fn === "Status") status = fv.name ?? "";
+      else if (fn === "Type") type = fv.name ?? "";
+      else if (fn === "Effort") effort = fv.name ?? "";
+      else if (fn === "Priority") priority = fv.name ?? "";
     }
     if (VISIBLE_STATUSES.includes(status))
       todos.push({ itemId: it.id, title, status, type, effort, priority });
@@ -183,10 +218,11 @@ export async function countItemsByStatus(
   statusName: string,
 ): Promise<number> {
   const query = `
-    query($login: String!, $number: Int!) {
+    query($login: String!, $number: Int!, $after: String) {
       user(login: $login) {
         projectV2(number: $number) {
-          items(first: 100) {
+          items(first: 100, after: $after) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               fieldValues(first: 20) {
                 nodes {
@@ -201,12 +237,16 @@ export async function countItemsByStatus(
         }
       }
     }`;
-  const data = await gql(env, "query", query, {
-    login: env.GITHUB_LOGIN,
-    number: projectNumber(env),
-  });
+  const items = await fetchAllProjectItems<{
+    fieldValues?: {
+      nodes?: Array<{
+        name?: string;
+        field?: { name?: string } | null;
+      }>;
+    } | null;
+  }>(env, query);
   let n = 0;
-  for (const it of data.user.projectV2.items.nodes) {
+  for (const it of items) {
     for (const fv of it.fieldValues?.nodes ?? []) {
       if (fv.field?.name === "Status" && fv.name === statusName) n++;
     }
