@@ -1,8 +1,14 @@
 import type { Env } from "../types";
 import { fetchTodos, updateItemStatus } from "../lib/github";
 import { buildTodoCard, buildItemCard, buildWipFullCard } from "../lib/cards";
-import { ACTION_VERB, WIP_LIMITS, getTransitionTarget, isActionName } from "../lib/state";
+import {
+  ACTION_VERB,
+  WIP_LIMITS,
+  getTransitionTarget,
+  isActionName,
+} from "../lib/state";
 import { rollReward } from "../lib/reward";
+import { externalErrorContext } from "../lib/http";
 
 /**
  * 飞书卡片按钮回调(card.action.trigger)。
@@ -15,7 +21,10 @@ import { rollReward } from "../lib/reward";
  * 不信任客户端回传的 title:旧卡片可能仍携带 title 字段(向后兼容容忍),一律忽略;
  * 找不到 item(已 Done/Abandoned/删除/过期卡片)或来源状态非法 → 拒绝,不 mutation。
  */
-export async function handleCardCallback(env: Env, body: any): Promise<Record<string, unknown>> {
+export async function handleCardCallback(
+  env: Env,
+  body: any,
+): Promise<Record<string, unknown>> {
   const value = body?.event?.action?.value ?? {};
   const action = value.action as string | undefined;
   const itemId = value.itemId as string | undefined;
@@ -43,10 +52,16 @@ export async function handleCardCallback(env: Env, body: any): Promise<Record<st
 
     // WIP 检查:仅在来源校验通过之后。目标状态有上限(Doing 3 / Next 5 / Paused 5)且已达上限 → 拦截
     const limit = WIP_LIMITS[target];
-    if (limit !== undefined && todos.filter((t) => t.status === target).length >= limit) {
+    if (
+      limit !== undefined &&
+      todos.filter((t) => t.status === target).length >= limit
+    ) {
       return {
         card: { type: "raw", data: buildWipFullCard(target, limit) },
-        toast: { type: "warning", content: `${target} 已满(${limit}/${limit})` },
+        toast: {
+          type: "warning",
+          content: `${target} 已满(${limit}/${limit})`,
+        },
       };
     }
 
@@ -55,7 +70,13 @@ export async function handleCardCallback(env: Env, body: any): Promise<Record<st
     // 完成:庆祝卡 + Variable Reward 搞怪文案(title 取服务端)
     if (action === "complete") {
       return {
-        card: { type: "raw", data: buildItemCard({ itemId, title: current.title, status: "Done" }, `🎉 ${rollReward()}`) },
+        card: {
+          type: "raw",
+          data: buildItemCard(
+            { itemId, title: current.title, status: "Done" },
+            `🎉 ${rollReward()}`,
+          ),
+        },
         toast: { type: "success", content: "已完成" },
       };
     }
@@ -68,11 +89,15 @@ export async function handleCardCallback(env: Env, body: any): Promise<Record<st
       card: { type: "raw", data: buildTodoCard(updated) },
       toast: { type: "success", content: `已${ACTION_VERB[action]}` },
     };
-  } catch (e) {
-    return ack("error", (e as Error).message);
+  } catch (error) {
+    console.error("card callback failed", externalErrorContext(error));
+    return ack("error", "操作暂时失败,请稍后重试");
   }
 }
 
-function ack(type: "success" | "error", content: string): Record<string, unknown> {
+function ack(
+  type: "success" | "error",
+  content: string,
+): Record<string, unknown> {
   return { toast: { type, content } };
 }
