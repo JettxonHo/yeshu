@@ -2,7 +2,7 @@
 
 > 建立:2026-08-08
 >
-> 状态:ACTIVE
+> 状态:COMPLETE_ENGINEERING / HUMAN_ACTION_PENDING
 >
 > Goal-ID:Codex task `019fd4e9-0624-7580-a012-7921d1dc1c1f`
 >
@@ -16,16 +16,16 @@
 
 ## 2. 当前状态
 
-- Engineering:`main@65d1a4c` 已含持久化幂等核心与外部 HTTP 边界修复；治理文档在 `codex/project-governance` 待 PR。
+- Engineering:`main@69f6de4` 已含持久化幂等核心、外部 HTTP 边界修复、接管治理与 Worker ProjectV2 cursor 分页；PR #14/#15/#16 CI 双绿并已合并。
 - Production:仍运行 `eb20515c`；幂等后端未启用。
 - Validation:V0/V1/V2 行为门槛仍 collecting；截图 DoD 未闭环。
 
 ## 3. 仓库与 GitHub 快照
 
 - 仓库:`JettxonHo/yeshu`，public，默认分支 `main`。
-- 2026-08-08 调查时开放 Issue=0、开放 PR=0、Milestone=0；历史 8 个 PR 均已合并。
+- 2026-08-08 接管时开放 Issue=0、开放 PR=0、Milestone=0；接管后建立 Milestone #1 与 Issues #9-#13/#17，并合并 PR #14-#16。
 - CI workflow 存在且历史运行成功，但 GitHub API 返回 `main` 未启用 Branch Protection，因此 required checks 尚未由平台强制。
-- 当前本地分支:`codex/project-governance`；`docs/audits/` 是未跟踪用户材料，不纳入自动提交。
+- 当前本地分支:`codex/reliability-goal-closeout`；`docs/audits/` 是未跟踪用户材料，不纳入自动提交。
 
 ## 4. 产品范围
 
@@ -50,7 +50,7 @@ Goal:
 
 ## 7. 已定与待定决策
 
-已定:GraphQL 分页是下一代码切片；mutation 不自动重试；产品行为门槛与工程门禁分开。待用户决定:是否启用 `main` Branch Protection；何时准备 Tablestore/RAM 并从 main 人工部署。
+已定:Worker GraphQL 分页已完成；mutation 不自动重试；产品行为门槛与工程门禁分开。待用户决定:是否启用 `main` Branch Protection；何时准备 Tablestore/RAM 并从 main 人工部署。
 
 ## 8. 当前架构
 
@@ -79,17 +79,17 @@ TypeScript strict、Hono、Node.js 20、Vitest、esbuild、阿里云 FC 3.0、Ta
 按当前价值排序:
 
 1. 生产幂等未启用——现实重复 mutation 风险，但受人工云资源/部署阻塞；
-2. Worker GraphQL 无分页——超过 50 项会让 `/today` 漏项、旧卡误拒绝，超过 100 项会让计数失真；
+2. Python 每日推送仍固定 `items(first:50)`——当前 workflow 连续成功，超过 50 项时可能漏任务；作为后续独立正确性切片，不混入本 Goal；
 3. `/add` 多步 mutation 可能留下无状态 item——先观察真实发生率，再决定补偿方案；
 4. WIP TOCTOU——单用户低并发，暂缓，出现真实越限证据再设计锁；
 5. 部署版本/回滚未工具化——保留人工 runbook，暂不自动部署。
 
 ## 13. Milestones
 
-- M1 接管基线:HTTP/依赖修复已由 PR #14 合并；治理文档待 PR 入库。
-- M2 查询正确性:Worker ProjectV2 cursor 分页经 Luna 实现、主控审查、CI 合并。
-- M3 运维就绪:幂等生产任务具备清晰人工前置、验证与回退条件；不代替用户执行。
-- M4 Goal 收口:Issues/PR/文档同步，无未解释的工程 blocker；行为验证继续独立收集。
+- M1 接管基线:PR #14/#15 已合并。
+- M2 查询正确性:Worker ProjectV2 cursor 分页已由 Luna 实现，经主控 `APPROVED` 与 CI 后由 PR #16 合并。
+- M3 运维就绪:幂等生产任务 #12 具备清晰人工前置、验证与回退条件；Agent 不代替用户执行。
+- M4 Goal 收口:Issue #17 同步最终状态；无未解释的自动化工程 blocker，行为验证继续独立收集。
 
 ## 14. 首批 Issues
 
@@ -98,6 +98,7 @@ TypeScript strict、Hono、Node.js 20、Vitest、esbuild、阿里云 FC 3.0、Ta
 3. [#11 Worker ProjectV2 cursor 分页](https://github.com/JettxonHo/yeshu/issues/11)；
 4. [#12 Tablestore 幂等生产启用](https://github.com/JettxonHo/yeshu/issues/12)（人工/外部阻塞）；
 5. [#13 `main` Branch Protection 决策](https://github.com/JettxonHo/yeshu/issues/13)（需用户确认）。
+6. [#17 Reliability Hardening 工程状态收口](https://github.com/JettxonHo/yeshu/issues/17)。
 
 ## 15. Task Contract
 
@@ -105,7 +106,7 @@ Task Contract 的必填字段与 Result Packet 见 [docs/agent-collaboration.md]
 
 ## 16. 测试策略
 
-详见 [docs/testing-strategy.md](docs/testing-strategy.md)。当前基线:生产依赖 audit=0、typecheck 通过、16 个测试文件/291 项通过、build 通过、Python 3.11 `py_compile` 通过。
+详见 [docs/testing-strategy.md](docs/testing-strategy.md)。当前基线:生产依赖 audit=0、typecheck 通过、17 个测试文件/293 项通过、build 通过、Python 3.11 `py_compile` 通过。
 
 ## 17. 分支、PR 与合并
 
@@ -114,7 +115,7 @@ Task Contract 的必填字段与 Result Packet 见 [docs/agent-collaboration.md]
 ## 18. Agent 分工与模型状态
 
 - 主控逻辑角色:`ORCHESTRATOR_REVIEWER`；负责规划、Issue、Task Contract、验收与合并决策。
-- 实现角色:`luna-worker`；配置映射为 `gpt-5.6-luna`/`max`，2026-08-08 已成功执行只读审计。
+- 实现角色:`luna-worker`；配置映射为 `gpt-5.6-luna`/`max`，2026-08-08 已成功执行只读审计与 Issue #11 分页实现。
 - 模型状态:`UNVERIFIED_RUNTIME_MODEL`。配置已核验，但运行时未暴露实际模型标识；不使用 Terra 回退。
 
 ## 19. 权限与安全
@@ -123,7 +124,7 @@ Task Contract 的必填字段与 Result Packet 见 [docs/agent-collaboration.md]
 
 ## 20. 开放问题与下一步
 
-无需阻塞当前工程的问题有两个:是否启用 Branch Protection、何时进行幂等生产启用。主控先推进 M1/M2；到外部动作门槛时停下请求确认。
+自动化工程范围已收口。后续需要用户决定两件事:是否启用 Branch Protection、何时进行幂等生产启用；在明确授权前保持 #12/#13 OPEN。V0/V1/V2 行为计数与截图继续由用户提供真实证据。
 
 ## Goal 完成标准
 

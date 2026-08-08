@@ -1,8 +1,8 @@
 # 野薯(Yeshu)· Development Plan
 
-> **版本**:1.5(2026-08-08 修订)
-> **本次修订**:V2-a 已合并并从 main 部署验证;Reliability Hardening 的幂等核心与外部 HTTP/依赖切片已合并,生产启用待人工完成;项目当前状态统一由 [docs/STATUS.md](docs/STATUS.md) 追踪,本文件只做开发拆解
-> **状态**:dev-builder · Reliability Hardening 进行中 → 行为达标后进 Phase 4(V2-b)
+> **版本**:1.6(2026-08-08 修订)
+> **本次修订**:V2-a 已合并并从 main 部署验证;Reliability Hardening 的幂等核心、外部 HTTP/依赖与 Worker GraphQL 分页已合并,自动化工程 Goal 完成,生产启用待人工决定;项目当前状态统一由 [docs/STATUS.md](docs/STATUS.md) 追踪,本文件只做开发拆解
+> **状态**:Reliability Hardening 工程收口 / 人工动作待定 → 行为达标后进 Phase 4(V2-b)
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -43,13 +43,13 @@
 ```
 📊 项目进度检测
 - Product Spec:✅(产品决策单一真相源)
-- DEV-PLAN   :✅(本文件 v1.5)
-- 项目代码   :✅(V1-a / V1-b / V2-a merged;Reliability Hardening 进行中)
-当前环节:dev-builder · Reliability Hardening
-  - Engineering :V2-a、持久化幂等核心与外部 HTTP/依赖修复已 merged(main@65d1a4c,291 项测试);生产启用与分页继续推进
+- DEV-PLAN   :✅(本文件 v1.6)
+- 项目代码   :✅(V1-a / V1-b / V2-a merged;Reliability Hardening 当前工程 Goal 完成)
+当前环节:Reliability Hardening 工程收口 / 人工动作待定
+  - Engineering :幂等核心、外部 HTTP/依赖修复与 Worker cursor 分页已 merged(main@69f6de4,293 项测试)
   - Production  :线上 FC 运行从 main@eb20515c 构建并验证的 V2-a;幂等后端尚未启用
   - Validation  :行为数据 collecting(V2 门槛:66 天按钮完成 ≥ 30,spec §14.1)
-下一步:恢复依赖安全门禁 → 完成幂等生产启用的人工前置/验证 → 继续分页、并发保护、timeout/retry、错误脱敏等可靠性项 → 行为达标后才进入 V2-b(Phase 4)
+下一步:用户决定幂等生产启用与 Branch Protection → 继续收集行为/截图证据 → 达标后才进入 V2-b(Phase 4)
 ```
 
 ---
@@ -305,10 +305,10 @@
 
 当前路由:**dev-builder · Reliability Hardening**。按序执行,不跳步:
 
-1. **固化接管治理**:Goal、架构、测试、决策与 Agent/Issue/PR 工作流走 Issue #10 → PR → CI → 合并;
-2. **补 Worker GraphQL cursor 分页**:由 Luna Worker 独立实现,主控审查,避免 `/today`、旧卡来源校验与 WIP 计数被连接上限截断;
-3. **幂等生产启用单独推进**:人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
-4. **克制处理其余旧债务**:WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
+1. **工程 Goal 已完成**:PR #14(HTTP/依赖)、#15(接管治理)、#16(Worker cursor 分页)均已合并且 CI 双绿;
+2. **幂等生产启用单独推进**:等待用户决定,之后人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
+3. **Branch Protection 单独决策**:GitHub 当前未强制 required checks,未经用户确认不修改仓库设置;
+4. **克制处理其余旧债务**:Python Actions 分页另开正确性切片;WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
 5. **达标后才进入 V2-b(Phase 4)**:铁律不变——行为门槛(66 天按钮完成 ≥ 30,spec §14.1)未达标,不启动应用主页、段位成就、多维表格看板等后续形态。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*
