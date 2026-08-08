@@ -121,7 +121,12 @@ yeshu/
 │   │       ├── github.ts  # GraphQL 封装(字段元数据/状态转换/查询)
 │   │       ├── lark.ts    # 飞书发消息(tenant token + sendCard)
 │   │       ├── ai.ts      # AI 抽象层(OpenAI 兼容)
+│   │       ├── http.ts    # 外部 HTTP 统一超时/安全重试/错误脱敏
 │   │       ├── cards.ts   # 飞书卡片 JSON(V1 带按钮;含 cards.test.ts)
+│   │       ├── idempotency.ts             # message_id/event_id 幂等协调器
+│   │       ├── atomic-key-store.ts         # 原子 claim 抽象
+│   │       ├── memory-atomic-key-store.ts  # 本地/测试实现
+│   │       ├── tablestore-atomic-key-store.ts # 生产持久化实现(待启用)
 │   │       ├── state.ts   # 6 状态机 + 来源矩阵 + 按钮集 + WIP 上限(§4.1/4.2/5.1;含 state.test.ts)
 │   │       ├── reward.ts  # Variable Reward 搞怪文案(§10.4;含 reward.test.ts)
 │   │       └── verify.ts  # 飞书 token 校验(fail-closed;含 verify.test.ts / env.test.ts 在 src/)
@@ -160,6 +165,13 @@ yeshu/
 8. **迭代即同步**:任何变更先更对应源文档再动代码。上游文档变了,主动查下游文档和代码受不受影响,不只改一个留其余脱节
 9. **设计优先级**:设计稿 > Design-Brief.md > Product-Spec.md。有设计稿时 UI 一切以设计稿为准。无设计稿时继承项目既有组件先例,不自由发挥
 10. **中文交流**:项目文档和代码注释用中文,代码命名用英文
+
+### 安全校验与设计的克制原则
+
+1. **禁止过度防御**:本项目不是安全攻防论文。可以校验真实风险,但方案必须与实际威胁、项目规模和核心目标成比例。
+2. **原则上禁止哈希 / SHA-256 方案**:除非存在有证据的重大安全隐患且会影响核心功能,否则禁止新增哈希、SHA-256 或同类安全校验设计。
+3. **不防御基本不可能出现的 case**:不要为极低概率、缺乏现实触发路径的情形反复增加 guard、分支和测试;发现这类 case 时优先简化。
+4. **Rubric 服务于判断**:需要 rubric 时保留工程判断与上下文,禁止机械逐项堆清单、为满足形式制造工作量。
 
 ### 代码风格
 
@@ -254,7 +266,7 @@ act -W .github/workflows/daily-push.yml
 
 ### 4. 静态检查
 - `tsc --noEmit`(TypeScript 无报错)
-- `python -m py_compile scripts/*.py`(Python 无语法错)
+- `python3 --version`(必须 ≥ 3.11)+ `python3 -m py_compile scripts/*.py`(Python 无语法错)
 - `pre-commit run --all-files`(如果装了 pre-commit hook)
 
 ---
@@ -269,7 +281,8 @@ npm ci
 npm run check        # = typecheck && test && build
 
 cd ..
-python -m py_compile scripts/*.py
+python3 --version       # 必须 >= 3.11
+python3 -m py_compile scripts/*.py
 ```
 
 ### CI 要求
@@ -322,12 +335,20 @@ python -m py_compile scripts/*.py
 
 本项目可能由不同 AI agent 协作开发。**所有上下文在文档里,不在任何 agent 的对话历史里**。换 agent 不丢上下文。
 
+### 当前 Agent 路由
+
+- 主控使用 `ORCHESTRATOR_REVIEWER` 逻辑角色:维护 Goal / Milestone / Issue / Task Contract,负责最终审查与合并决策;
+- 有明确文件范围和验收标准的实现任务使用 `luna-worker`;禁止回退到 Terra;
+- 配置正确但运行时未暴露实际模型时,记录 `UNVERIFIED_RUNTIME_MODEL`,不得把配置当运行证据;
+- 完整模板与状态词见 `docs/agent-collaboration.md`,当前目标见 `GOAL.md`。
+
 ### 文档职责
 
 | 文档 | 职责 | 谁写 | 谁读 |
 |---|---|---|---|
 | **Product-Spec.md** | 产品决策(做什么) | 产品讨论 | 所有 agent |
 | **DEV-PLAN.md** | 开发计划(怎么做) | dev-planner | 所有 agent |
+| **GOAL.md** | 当前开发目标、里程碑与范围 | 主控 | 所有 agent |
 | **AGENTS.md** | 项目规范(怎么写) | 本文件 | 所有 agent |
 | **代码注释** | 实现细节(为什么这么写) | dev-builder | 审查 agent |
 
@@ -338,7 +359,7 @@ python -m py_compile scripts/*.py
 3. **每个 Phase 完成后更新 DEV-PLAN.md 的状态**(✅ 完成 / ⏳ 进行中 / ⏸ 暂停)
 4. **代码审查发现问题**,直接在 PR/commit 评论,不修改 Product-Spec.md
 5. **spec 变更必须先更 Product-Spec.md,再改代码**(单一真相源原则)
-6. **换 agent 时**,新 agent 必须先读 Product-Spec.md + DEV-PLAN.md + AGENTS.md,再动手
+6. **换 agent 时**,新 agent 必须先读 Product-Spec.md + docs/STATUS.md + DEV-PLAN.md + GOAL.md + AGENTS.md,再动手
 
 ### 常见协作场景
 

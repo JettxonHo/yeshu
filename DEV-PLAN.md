@@ -1,8 +1,8 @@
 # 野薯(Yeshu)· Development Plan
 
-> **版本**:1.3(2026-08-02 修订)
-> **本次修订**:V2-a 代码完成,PR #2 Draft / CI green(168 项测试、服务端来源状态校验);项目当前状态统一由 [docs/STATUS.md](docs/STATUS.md) 追踪,本文件只做开发拆解
-> **状态**:dev-builder · Phase 3(V2-a)✅ 代码完成 / ⏳ 待最终收口、合并 main 与从 main 部署 → Reliability Hardening → 行为达标后进 Phase 4(V2-b)
+> **版本**:1.5(2026-08-08 修订)
+> **本次修订**:V2-a 已合并并从 main 部署验证;Reliability Hardening 的幂等核心与外部 HTTP/依赖切片已合并,生产启用待人工完成;项目当前状态统一由 [docs/STATUS.md](docs/STATUS.md) 追踪,本文件只做开发拆解
+> **状态**:dev-builder · Reliability Hardening 进行中 → 行为达标后进 Phase 4(V2-b)
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -24,7 +24,7 @@
 | **0** | **V0** | **零代码 Cowork 行为验证**:每天 08:02 推今日待办,验证"你会看推送" | 基线 | 30 min + 7 天验证 | ⏳ |
 | 1 | V1-a | GitHub Actions 推送系统(把 V0 即时代码正式化) | 0 | 3–5 天 | ✅ |
 | 2 | V1-b | Worker 实时层(阿里云 FC)+ `/add` + `/today` + 统一卡片构造器(完成 V1) | 1 | 5–7 天 | ✅ |
-| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | ~1 天 | ✅(代码)/ ⏳ 未合并、未最终部署 |
+| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | ~1 天 | ⏳(工程/生产验证完成;截图证据与行为门槛未闭环) |
 | 4 | V2-b | Stuck/P0 算法 + 周三体检推送(完成 V2) | 3 | 3–5 天 | ⬜ |
 | 5 | V3-a | 飞书云文档写作子系统(`/note` `/draft` `/drafts`) | 4 | 5–7 天 | ⬜ |
 | 6 | V3-b | 周日 Review 5 步 + 想法子系统(完成 V3) | 5 | 3–5 天 | ⬜ |
@@ -43,13 +43,13 @@
 ```
 📊 项目进度检测
 - Product Spec:✅(产品决策单一真相源)
-- DEV-PLAN   :✅(本文件 v1.3)
-- 项目代码   :✅(V1-a 推送 merged;V1-b Worker merged;V2-a 代码完成,PR #2 Draft / CI green)
-当前环节:dev-builder · V2-a 收口期
-  - Engineering :V2-a 代码完成;PR #2 OPEN / Draft / CI 双绿(worker + python);168 项测试(含 15 项 Webhook 路由测试);服务端来源状态校验已实现
-  - Production  :线上 FC 运行 V2-a 早期版本;来源状态校验修复(PR-B)尚未确认部署
+- DEV-PLAN   :✅(本文件 v1.5)
+- 项目代码   :✅(V1-a / V1-b / V2-a merged;Reliability Hardening 进行中)
+当前环节:dev-builder · Reliability Hardening
+  - Engineering :V2-a、持久化幂等核心与外部 HTTP/依赖修复已 merged(main@65d1a4c,291 项测试);生产启用与分页继续推进
+  - Production  :线上 FC 运行从 main@eb20515c 构建并验证的 V2-a;幂等后端尚未启用
   - Validation  :行为数据 collecting(V2 门槛:66 天按钮完成 ≥ 30,spec §14.1)
-下一步:PR #2 最终收口 → 合并 main → 从 main 部署并验证 → Reliability Hardening → 行为达标后才进入 V2-b(Phase 4)
+下一步:恢复依赖安全门禁 → 完成幂等生产启用的人工前置/验证 → 继续分页、并发保护、timeout/retry、错误脱敏等可靠性项 → 行为达标后才进入 V2-b(Phase 4)
 ```
 
 ---
@@ -112,7 +112,7 @@
   - [ ] 截图存 `docs/screenshots/`
 - **涉及文件**:`.github/workflows/daily-push.yml`、`scripts/{fetch_data,build_card,push_lark}.py`、`cards/daily-push.example.json`
 - **依赖**:Phase 0(V0 验证通过才值得投入建系统)
-- **测试**:`act -W .github/workflows/daily-push.yml`;端到端飞书收到推送;`python -m py_compile scripts/*.py`
+- **测试**:`act -W .github/workflows/daily-push.yml`;端到端飞书收到推送;`python3 -m py_compile scripts/*.py`(Python ≥ 3.11)
 - **工作量**:3–5 天
 - **完成(2026-07-20)**:飞书通讯录权限范围配好(管理员)+ `batch_get_id` 拿到本应用 open_id → `push_lark` 通。GitHub Actions run `29712071750`(schedule 自动)**success**,云端链路验证通过。6 个 Secret 齐(`GH_PAT`/`YESHU_LOGIN`/`YESHU_PROJECT_NUMBER`/`LARK_APP_ID`/`LARK_APP_SECRET`/`LARK_OPEN_ID`)
 - **状态**:✅ 完成
@@ -146,7 +146,7 @@
 
 ---
 
-### Phase 3 · V2-a · 按钮回调 + 状态机 + WIP ✅(代码完成)
+### Phase 3 · V2-a · 按钮回调 + 状态机 + WIP ⏳
 
 - **目标**:实现 spec §4.1 状态机 + §4.2 按钮设计——卡片按钮触发状态转换,WIP 检查(§5.1)。V2 双向闭环核心
 - **完成标准**:
@@ -162,8 +162,27 @@
 - **依赖**:Phase 2
 - **测试**:`npm run dev` + curl 模拟 card.action.trigger;飞书点按钮卡片就地更新
 - **工作量**:5–7 天 → 实际 ~1 天
-- **状态**:✅ 代码完成 / ⏳ 未合并、未最终部署。PR #2 为 Draft、base = main,实时 head 以 GitHub PR #2 为准;CI 双绿,168 项测试,已含服务端来源状态校验(PR-B:拒绝过期卡片与终态复活、不信任客户端 title)与 Webhook 路由测试。生产 FC 仍为合并前早期版本,PR-B 修复**尚未确认部署**;合并后必须从 main 重新部署并核对 commit SHA(流程见 docs/STATUS.md)。行为数据仍 collecting(V2 门槛:66 天按钮完成 ≥ 30,§14.1)
+- **状态**:⏳ 工程合并与生产功能验证完成,但 `docs/screenshots/` 缺少关键交互截图,不满足 AGENTS.md 的完整 Phase DoD;行为数据也仍 collecting(V2 门槛:66 天按钮完成 ≥ 30,§14.1)。后续 Reliability Hardening 状态以 `docs/STATUS.md` 为准。
 - **关键决策**:① GitHub 内建 Status 扩到 6 态(非新建);② 飞书卡片用 **V1 格式**(V2 不支持 `tag:action`,230099);③ 回调返回刷新后的 /today 列表(非单项卡);④ V2-b 行为观察与开发并行
+
+---
+
+### Reliability Hardening · 当前切片 ⏳
+
+- **目标**:在不启动新产品功能的前提下,先恢复可信依赖基线,再治理 Worker 外部 HTTP 边界。
+- **本切片开发决策**:
+  1. Hono 最低版本提升到官方安全修复下限 `4.12.34`,lockfile 以门禁实际解析版本为准;
+  2. GitHub / 飞书 / AI 请求统一具备显式超时,不再依赖 Node `fetch` 的无限等待;
+  3. 只有可安全重放的读取请求允许对网络错误、超时、429、5xx 做一次有界重试;GitHub mutation、飞书发卡片、AI 请求默认不自动重试,避免重复副作用/重复计费;
+  4. 外部响应体与 SDK 原始错误不进入用户卡片/toast;用户只见稳定友好文案,诊断日志只保留服务名、错误类别与 HTTP 状态等脱敏字段;
+  5. 不新增第三方依赖,使用 Node 20 原生 `fetch` + `AbortController` / `setTimeout`,同一超时生命周期覆盖响应头与 JSON body 读取。
+- **完成标准**:
+  - [x] Hono 安全门禁恢复,`npm audit --omit=dev --audit-level=moderate` 为 0;
+  - [x] 超时、可重试状态、网络错误、mutation 不重试均有单元测试;
+  - [x] GitHub / 飞书 / AI 三个客户端接入统一策略;
+  - [x] `/add`、`/today`、callback 的用户错误信息不再透传原始外部错误;
+  - [x] `npm run check` + Python 3.11+ `py_compile` 全绿;
+- **状态**:✅ 已由 PR #14 合并 main(`65d1a4c`),CI worker/python 双绿。生产部署不在本切片范围;只允许从 main 人工部署。
 
 ---
 
@@ -284,12 +303,12 @@
 
 ## 6. 下一步
 
-当前路由:**dev-builder · V2-a 收口 → Reliability Hardening**。按序执行,不跳步:
+当前路由:**dev-builder · Reliability Hardening**。按序执行,不跳步:
 
-1. **PR #2 最终收口**:文档 / 迁移安全 / Webhook 路由测试对齐(stacked PR,base = feat/v2a-interactive;CI 手动触发并等绿);
-2. **合并 main**:由主控审查后合并 PR #2(CI worker / python 必须全绿;Draft → Ready 由主控操作);
-3. **从 main 部署并验证**:人工部署 → 核对部署 commit SHA → curl smoke test → 飞书原生测试(原则见 AGENTS.md「CI 门禁与部署原则」);
-4. **Reliability Hardening**:event_id 幂等、GraphQL 分页、WIP 并发保护、外部 API timeout/retry、错误脱敏、部署版本与回滚、daily-push TS 化、Encrypt Key 评估(清单以 docs/STATUS.md「剩余可靠性工作」为准);
+1. **固化接管治理**:Goal、架构、测试、决策与 Agent/Issue/PR 工作流走 Issue #10 → PR → CI → 合并;
+2. **补 Worker GraphQL cursor 分页**:由 Luna Worker 独立实现,主控审查,避免 `/today`、旧卡来源校验与 WIP 计数被连接上限截断;
+3. **幂等生产启用单独推进**:人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
+4. **克制处理其余旧债务**:WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
 5. **达标后才进入 V2-b(Phase 4)**:铁律不变——行为门槛(66 天按钮完成 ≥ 30,spec §14.1)未达标,不启动应用主页、段位成就、多维表格看板等后续形态。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*

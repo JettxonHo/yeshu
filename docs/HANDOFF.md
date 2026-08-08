@@ -13,7 +13,8 @@ npm ci
 npm run check                      # typecheck + test + build 一把过
 
 cd ..
-python -m py_compile scripts/*.py
+python3 --version                     # 必须 >= 3.11
+python3 -m py_compile scripts/*.py
 ```
 
 本地起 Worker 调试(可选):`cd worker && npm run dev`(端口 9000,tsx 常驻;curl 模拟 webhook)。
@@ -29,7 +30,8 @@ python -m py_compile scripts/*.py
 1. [Product-Spec.md](../Product-Spec.md) — 产品决策单一真相源
 2. [docs/STATUS.md](STATUS.md) — 当前状态唯一事实页
 3. [DEV-PLAN.md](../DEV-PLAN.md) — 开发计划(怎么做、Phase 拆解)
-4. [AGENTS.md](../AGENTS.md) — 项目规范与铁律(检查命令 / CI / 部署原则)
+4. [GOAL.md](../GOAL.md) — 当前可靠性 Goal、Milestones 与任务边界
+5. [AGENTS.md](../AGENTS.md) — 项目规范与铁律(检查命令 / CI / 部署原则)
 
 ## 4. 当前开发边界
 
@@ -50,10 +52,11 @@ npm ci
 npm run check
 
 cd ..
-python -m py_compile scripts/*.py
+python3 --version                     # 必须 >= 3.11
+python3 -m py_compile scripts/*.py
 ```
 
-CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker + python** 两个 Job,必须全绿。base 非 main 的 stacked PR 不自动触发,需手动 `gh workflow run ci.yml --ref <branch>` 并等绿后再交付审查。
+CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker + python** 两个 Job,项目流程要求全绿。2026-08-08 核验时 GitHub 尚未启用 Branch Protection,所以平台未强制 required checks;是否开启需用户确认。base 非 main 的 stacked PR 不自动触发,需手动 `gh workflow run ci.yml --ref <branch>` 并等绿后再交付审查。
 
 ## 6. 部署原则
 
