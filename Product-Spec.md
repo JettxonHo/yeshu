@@ -2,7 +2,7 @@
 
 > **版本**:1.0
 > **日期**:2026-07-20
-> **状态**:Spec 完成,待进 dev-planner
+> **状态**:产品决策稳定;V2-a 工程/生产验证完成,行为验证 collecting;当前处于 Reliability Hardening
 > **维护**:本文档是项目单一真相源,后续 dev-planner / dev-builder 以此为基础
 
 ---
@@ -506,8 +506,8 @@ Anchor Root/
         ┌────────┴────────┐
         ▼                 ▼
 ┌──────────────┐  ┌──────────────┐
-│ Cloudflare   │  │ GitHub       │
-│ Worker       │  │ Actions      │
+│ 阿里云 FC    │  │ GitHub       │
+│ Hono Worker  │  │ Actions      │
 │ (实时响应)   │  │ (定时推送)   │
 └──────┬───────┘  └──────┬───────┘
        │                 │
@@ -540,27 +540,24 @@ Anchor Root/
 ```
 yeshu/
 ├── .github/workflows/
+│   ├── ci.yml
 │   ├── daily-push.yml
-│   ├── wednesday-check.yml
-│   ├── weekly-review.yml
-│   └── deploy-worker.yml
+│   ├── wednesday-check.yml      # planned
+│   └── weekly-review.yml        # planned
 ├── worker/
 │   ├── src/
-│   │   ├── index.ts            # Hono 入口
+│   │   ├── app.ts              # 平台无关 Hono 应用
+│   │   ├── fc.ts               # 阿里云 FC 入口
+│   │   ├── index.ts            # 本地入口
 │   │   ├── commands/           # 命令处理
-│   │   └── lib/
-│   │       ├── github.ts       # GraphQL
-│   │       ├── lark.ts         # lark-cli
-│   │       ├── ai.ts           # AI 抽象
-│   │       ├── cards.ts        # 卡片构造
-│   │       └── verify.ts       # 签名校验
-│   └── wrangler.toml
+│   │   └── lib/                # GraphQL / 飞书 / AI / 卡片 / 幂等
+│   └── s.yaml                  # FC 3.0 部署配置
 ├── scripts/
 │   ├── fetch_data.py
-│   ├── analyze.py
+│   ├── analyze.py              # planned
 │   ├── build_card.py
 │   └── push_lark.py
-├── cards/                      # 卡片模板
+├── docs/                       # 状态、Goal 配套文档、运行手册
 ├── .env.example
 ├── .gitignore                  # 含 .env
 └── README.md
@@ -590,7 +587,7 @@ async function callAI(prompt: string, env: Env): Promise<string> {
 }
 ```
 
-**切换 Provider**:改 wrangler.toml 的 `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`,代码不动。
+**切换 Provider**:改 FC 环境变量(`worker/s.yaml` 透传)中的 `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`,代码不动。
 
 ### 11.6 三个核心工作流
 
@@ -621,7 +618,7 @@ cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/St
 
 ### 12.3 应急预案
 
-泄漏后 5 分钟:Provider 后台撤销 Key → 生成新 Key → 更新 Cloudflare/GitHub Secrets → 必要时 git filter-repo 清理历史。
+泄漏后 5 分钟:Provider 后台撤销 Key → 生成新 Key → 更新 FC/GitHub Secrets → 必要时 git filter-repo 清理历史。
 
 ---
 
@@ -735,4 +732,4 @@ cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/St
 
 ---
 
-*Spec 结束。下一步:在 Claude Code 新 session,用本文档作为输入,进 dev-planner。*
+*Spec 结束。当前开发路由与阶段状态见 DEV-PLAN.md、docs/STATUS.md 与 GOAL.md。*

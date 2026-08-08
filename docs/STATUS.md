@@ -1,6 +1,6 @@
 # 野薯项目状态
 
-> 快照时间:2026-08-02。本页是项目当前状态的**唯一事实页**:其他文档(DEV-PLAN / AGENTS / HANDOFF)引用本页,不复制状态。
+> 快照时间:2026-08-08。本页是项目当前状态的**唯一事实页**:其他文档(DEV-PLAN / AGENTS / HANDOFF / GOAL)引用本页,不复制状态。
 
 ## 三轴状态
 
@@ -9,7 +9,7 @@
 | V1-a 每日推送 | merged | active | collecting |
 | V1-b Worker | merged | deployed | collecting |
 | V2-a 交互状态机 | merged / CI green | deployed and verified | collecting |
-| Reliability Hardening | planned / next | partial | not applicable |
+| Reliability Hardening | in progress(`event_id` / `message_id` 幂等核心已 merged) | 幂等后端尚未启用 | not applicable |
 | V2-b | paused | not deployed | not started |
 
 三轴含义:
@@ -36,16 +36,21 @@
    5. 飞书原生测试(/add 建卡、/today 分组卡、按钮全流转、旧卡片拒绝)。
 7. **行为验证与工程门槛分离**:工程达标(CI / 测试 / 审查)只决定是否允许合并;产品阶段晋级由行为数据决定(66 天按钮完成 ≥ 30 次,spec §14.1),二者不互相替代。行为数据仍 collecting。
 8. 当前下一项是 **Reliability Hardening**,不是应用主页、段位成就或前端美化。V2-a 生产验证已经完成,但行为验证仍在 collecting;当前不启动新的产品功能。
+9. 持久化幂等核心的工程基线 commit 为 `422e32c39943e8a38f9b95a4385ca57e414eb0d1`:Tablestore 适配器、配置校验和 264 项测试已合并,但 Tablestore 资源准备、生产配置与从 main 部署尚未执行。因此生产仍运行 `eb20515c` 的 V2-a 基线,不能声称幂等已在线生效;当前 main tip 应实时查询 GitHub 分支,不在本文固定。
+10. 2026-08-06 接手审计发现 Hono `<4.12.34` 新披露的 moderate CORS ReDoS 漏洞;PR #14 已把最低版本提升至官方修复下限并解析到 `4.13.0`,2026-08-08 以 squash commit `65d1a4c` 合并 main,`npm audit` 为 0,CI worker/python 双绿。
+11. **Phase DoD 证据缺口**:`docs/screenshots/` 当前只有 `.gitkeep`,没有 V0/V1/V2 关键交互截图。V2-a 可以确认“工程合并 + 生产功能验证完成”,但不能声称 AGENTS.md 定义的完整 Phase DoD 已闭环;截图与行为门槛都待用户侧真实证据补齐。
+12. 2026-08-08 GitHub API 核验:`main` 尚未启用 Branch Protection。CI workflow 与历史 worker/python 绿灯真实存在,但“required checks”目前是项目流程要求,不是平台强制规则;是否启用保护需用户确认。
+13. 当前接管 Goal 与任务边界见 [GOAL.md](../GOAL.md)。外部 HTTP/依赖切片已由 PR #14 合并 main;基线为 16 个测试文件 / 291 项通过、生产依赖 audit 0、typecheck/build/Python 3.11 py_compile 与远程 CI 全绿。该合并未触发生产部署,生产仍运行 `eb20515c`。
 
 ## 剩余可靠性工作(Reliability Hardening 清单)
 
-- `event_id` 幂等:飞书超时重试可导致重复建卡 / 重复状态转换(需 event_id 存储,如 Tablestore);
+- `event_id` / `message_id` 幂等:**工程核心已完成**(`main@422e32c`),待人工准备 Tablestore / 最小权限 RAM 身份、隔离环境实测、从 main 部署与生产重投验证;未部署前线上仍可能重复建卡 / 重复状态转换;
 - GraphQL 分页:现 `first: 50`,任务更多时活跃列表可能被截断,表现为回调误拒绝并提示 /today;
-- WIP 并发保护:当前检查与写入非原子(TOCTOU),并发可越过上限;
-- 外部 API timeout / retry:GitHub GraphQL 与飞书发消息均无超时与重试策略;
-- 错误脱敏:当前错误 message 直透用户 toast,未做脱敏;
+- WIP 并发保护:当前检查与写入非原子(TOCTOU),但项目为单用户且暂无真实并发越限证据;按克制原则暂缓,出现现实触发证据再设计锁;
+- 外部 API timeout / retry:**本次接手切片已实现并完成本地门禁**:默认 2 秒 HTTP 超时(AI 生成请求为 5 秒),且覆盖响应头与 JSON body;只有 GitHub query 对 timeout / network / 408 / 425 / 429 / 5xx 做一次有界重试;GitHub mutation、飞书发卡片、AI 请求不自动重试;
+- 错误脱敏:**本次接手切片已实现并完成本地门禁**:外部响应体 / GraphQL errors 不进入异常或用户卡片/toast,日志仅保留服务名、错误类别、HTTP 状态等结构化字段;飞书 HTTP 200 非零业务码会清 token 缓存,下一次用户操作重新取 token;
 - 部署版本与回滚:记录部署 SHA、保留上一稳定版本、明确回滚步骤。2026-08-02 部署前已建立并校验代码包与配置快照,完成本地持久化和恢复步骤记录;本次未实际执行回滚演练,流程尚未工具化,FC 侧亦无版本 / 别名机制;
-- daily-push TypeScript 化:Python 推送脚本与 Worker 两套状态 / 卡片逻辑,收敛方案待评估;
-- Encrypt Key 评估:现用 Verification Token 明文校验,是否升级飞书签名 + 事件加密待决策。
+- daily-push TypeScript 化:Python 推送脚本与 Worker 两套状态 / 卡片逻辑,但现有 workflow 连续运行成功;先修正确性,语言重写暂缓;
+- Encrypt Key 评估:现用 Verification Token fail-closed,暂无攻击/多租户证据;不引入哈希/SHA-256,威胁模型变化时再评估签名与事件加密。
 
 本清单由本文件统一追踪;各文档只引用本节,不复制。

@@ -117,6 +117,7 @@ fail-closed 场景验证必须在**隔离环境**完成,任选其一:
   - `protobufjs 7.6.5`(覆盖 tablestore 声明的 6.x:6.x 无安全修复,全部 11 项 advisory 修复于 ≥7.6.3,含 critical GHSA-xq3m-2v4x-88gg);
   - `buffer 5.7.1`(覆盖已废弃的 4.9.1,无 advisory,消除 deprecated 警告);
 - `@hono/node-server` 升级 `^2.0.12`(修复 moderate GHSA-frvp-7c67-39w9;仅本地开发入口使用);
+- `hono` 最低版本为 `^4.12.34`,当前 lockfile 解析 `4.13.0`(修复 moderate GHSA-8j4g-w8fx-2239;2026-08-06 接手门禁复核);
 - override 兼容性证据:全部适配器 mock 测试 + 真实 SDK Runtime Contract Test(`tablestore-sdk-contract.test.ts`:导出存在性、条件对象构造、官方字段 Client 构造、协议 encode/decode 往返,零网络);
 - CI 门禁:worker job 在 `npm ci` 之后运行 `npm run security:audit`(`--audit-level=moderate`,moderate 及以上即失败);不接受 `--force`、忽略退出码、删除 lock、把生产依赖误标 devDependency 等伪绿手段;
 - tablestore 上游若发布修复 protobufjs 依赖的新版本,应优先升级官方包并移除 override。
