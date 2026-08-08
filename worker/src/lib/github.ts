@@ -1,19 +1,47 @@
 import type { Env, Todo } from "../types";
+import { ExternalHttpError, fetchJsonWithPolicy } from "./http";
 
 const GRAPHQL_URL = "https://api.github.com/graphql";
 
-async function gql(env: Env, query: string, variables: Record<string, unknown> = {}): Promise<any> {
-  const resp = await fetch(GRAPHQL_URL, {
-    method: "POST",
-    headers: { Authorization: `bearer ${env.GITHUB_TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query, variables }),
-  });
-  if (!resp.ok) {
-    throw new Error(`GitHub GraphQL ${resp.status}: ${await resp.text()}`);
+type GqlOperation = "query" | "mutation";
+
+async function gql(
+  env: Env,
+  operation: GqlOperation,
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<any> {
+  const payload = await fetchJsonWithPolicy<unknown>(
+    GRAPHQL_URL,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `bearer ${env.GITHUB_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query, variables }),
+    },
+    {
+      service: "github",
+      // GraphQL query 可安全重放;mutation 不自动重试,避免重复副作用。
+      retry: operation === "query" ? "safe" : "none",
+    },
+  );
+  if (typeof payload !== "object" || payload === null || !("data" in payload)) {
+    throw new ExternalHttpError({
+      service: "github",
+      kind: "invalid-response",
+      retryable: false,
+    });
   }
-  const data: any = await resp.json();
-  if (data.errors) {
-    throw new Error(`GitHub GraphQL errors: ${JSON.stringify(data.errors)}`);
+  const data = payload as { data: unknown; errors?: unknown };
+  if (Array.isArray(data.errors) && data.errors.length > 0) {
+    // GraphQL error 的 path / node id / message 不进入异常文本或用户卡片。
+    throw new ExternalHttpError({
+      service: "github",
+      kind: "remote-error",
+      retryable: false,
+    });
   }
   return data.data;
 }
@@ -46,7 +74,10 @@ export async function fetchProjectMeta(env: Env): Promise<ProjectMeta> {
         }
       }
     }`;
-  const data = await gql(env, query, { login: env.GITHUB_LOGIN, number: projectNumber(env) });
+  const data = await gql(env, "query", query, {
+    login: env.GITHUB_LOGIN,
+    number: projectNumber(env),
+  });
   const proj = data.user.projectV2;
   const fields: ProjectMeta["fields"] = {};
   for (const f of proj.fields.nodes) {
@@ -86,12 +117,18 @@ export async function fetchTodos(env: Env): Promise<Todo[]> {
         }
       }
     }`;
-  const data = await gql(env, query, { login: env.GITHUB_LOGIN, number: projectNumber(env) });
+  const data = await gql(env, "query", query, {
+    login: env.GITHUB_LOGIN,
+    number: projectNumber(env),
+  });
   const items = data.user.projectV2.items.nodes;
   const todos: Todo[] = [];
   for (const it of items) {
     const title = it.content?.title ?? "(无标题)";
-    let status = "", type = "", effort = "", priority = "";
+    let status = "",
+      type = "",
+      effort = "",
+      priority = "";
     for (const fv of it.fieldValues?.nodes ?? []) {
       const fn = fv.field?.name;
       if (fn === "Status") status = fv.name;
@@ -99,13 +136,19 @@ export async function fetchTodos(env: Env): Promise<Todo[]> {
       else if (fn === "Effort") effort = fv.name;
       else if (fn === "Priority") priority = fv.name;
     }
-    if (VISIBLE_STATUSES.includes(status)) todos.push({ itemId: it.id, title, status, type, effort, priority });
+    if (VISIBLE_STATUSES.includes(status))
+      todos.push({ itemId: it.id, title, status, type, effort, priority });
   }
   return todos;
 }
 
 /** 设某 item 的 single-select 字段(通用,供 Status/Type/Priority/Effort 复用) */
-async function setItemField(env: Env, itemId: string, fieldName: string, optionName: string): Promise<void> {
+async function setItemField(
+  env: Env,
+  itemId: string,
+  fieldName: string,
+  optionName: string,
+): Promise<void> {
   const meta = await fetchProjectMeta(env);
   const field = meta.fields[fieldName];
   if (!field) throw new Error(`未知字段:${fieldName}`);
@@ -117,16 +160,28 @@ async function setItemField(env: Env, itemId: string, fieldName: string, optionN
         projectId: $pid, itemId: $iid, fieldId: $fid, value: { singleSelectOptionId: $oid }
       }) { projectV2Item { id } }
     }`;
-  await gql(env, m, { pid: meta.projectId, iid: itemId, fid: field.fieldId, oid: optionId });
+  await gql(env, "mutation", m, {
+    pid: meta.projectId,
+    iid: itemId,
+    fid: field.fieldId,
+    oid: optionId,
+  });
 }
 
 /** 状态转换:设 Status(按钮回调核心) */
-export async function updateItemStatus(env: Env, itemId: string, statusName: string): Promise<void> {
+export async function updateItemStatus(
+  env: Env,
+  itemId: string,
+  statusName: string,
+): Promise<void> {
   await setItemField(env, itemId, "Status", statusName);
 }
 
 /** 数某状态的 item 数(Slice 2 WIP 检查用) */
-export async function countItemsByStatus(env: Env, statusName: string): Promise<number> {
+export async function countItemsByStatus(
+  env: Env,
+  statusName: string,
+): Promise<number> {
   const query = `
     query($login: String!, $number: Int!) {
       user(login: $login) {
@@ -146,7 +201,10 @@ export async function countItemsByStatus(env: Env, statusName: string): Promise<
         }
       }
     }`;
-  const data = await gql(env, query, { login: env.GITHUB_LOGIN, number: projectNumber(env) });
+  const data = await gql(env, "query", query, {
+    login: env.GITHUB_LOGIN,
+    number: projectNumber(env),
+  });
   let n = 0;
   for (const it of data.user.projectV2.items.nodes) {
     for (const fv of it.fieldValues?.nodes ?? []) {
@@ -163,7 +221,7 @@ export async function addDraftIssue(env: Env, title: string): Promise<string> {
     mutation($pid: ID!, $title: String!) {
       addProjectV2DraftIssue(input: { projectId: $pid, title: $title }) { projectItem { id } }
     }`;
-  const r = await gql(env, m, { pid: meta.projectId, title });
+  const r = await gql(env, "mutation", m, { pid: meta.projectId, title });
   const itemId: string = r.addProjectV2DraftIssue.projectItem.id;
   await setItemField(env, itemId, "Status", "Backlog"); // spec §4.3 默认
   return itemId;

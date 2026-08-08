@@ -54,25 +54,36 @@ describe("9.1 输入校验(先于一切 IO)", () => {
     ["itemId 缺失", { action: "start" }],
     ["未知 action", { action: "fly", itemId: "PVTI_1" }],
     ["原型属性 action toString", { action: "toString", itemId: "PVTI_1" }],
-    ["原型属性 action constructor", { action: "constructor", itemId: "PVTI_1" }],
+    [
+      "原型属性 action constructor",
+      { action: "constructor", itemId: "PVTI_1" },
+    ],
     ["action 为空串", { action: "", itemId: "PVTI_1" }],
     ["value 整体缺失", undefined],
   ])("%s → 无效操作,不触 IO", async (_name, value) => {
     const res = await handleCardCallback(ENV, cbBody(value));
-    expect(res).toEqual({ toast: { type: "error", content: "无效的按钮操作" } });
+    expect(res).toEqual({
+      toast: { type: "error", content: "无效的按钮操作" },
+    });
     expect(fetchTodos).not.toHaveBeenCalled();
     expect(updateItemStatus).not.toHaveBeenCalled();
   });
 
   it("body 为 null / 缺 event → 无效操作", async () => {
-    expect(await handleCardCallback(ENV, null)).toEqual({ toast: { type: "error", content: "无效的按钮操作" } });
-    expect(await handleCardCallback(ENV, {})).toEqual({ toast: { type: "error", content: "无效的按钮操作" } });
+    expect(await handleCardCallback(ENV, null)).toEqual({
+      toast: { type: "error", content: "无效的按钮操作" },
+    });
+    expect(await handleCardCallback(ENV, {})).toEqual({
+      toast: { type: "error", content: "无效的按钮操作" },
+    });
     expect(fetchTodos).not.toHaveBeenCalled();
   });
 });
 
 describe("9.2 八种合法转换(服务端来源 + 目标)", () => {
-  const CASES: Array<[source: string, action: string, target: string, verb: string]> = [
+  const CASES: Array<
+    [source: string, action: string, target: string, verb: string]
+  > = [
     ["Backlog", "schedule", "Next", "排期"],
     ["Next", "defer", "Backlog", "改天"],
     ["Next", "start", "Doing", "开始"],
@@ -84,7 +95,10 @@ describe("9.2 八种合法转换(服务端来源 + 目标)", () => {
 
   it.each(CASES)("%s + %s → %s", async (source, action, target, verb) => {
     mockTodos(makeTodo("PVTI_1", "真实标题", source));
-    const res = await handleCardCallback(ENV, cbBody({ action, itemId: "PVTI_1" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action, itemId: "PVTI_1" }),
+    );
 
     expect(fetchTodos).toHaveBeenCalledTimes(1);
     expect(fetchTodos).toHaveBeenCalledWith(ENV);
@@ -105,21 +119,33 @@ describe("9.2 八种合法转换(服务端来源 + 目标)", () => {
     }
   });
 
-  it.each(["Backlog", "Next", "Doing", "Paused"])("abandon:%s → Abandoned(四种来源全覆盖)", async (source) => {
-    mockTodos(makeTodo("PVTI_1", "真实标题", source));
-    const res = await handleCardCallback(ENV, cbBody({ action: "abandon", itemId: "PVTI_1" }));
+  it.each(["Backlog", "Next", "Doing", "Paused"])(
+    "abandon:%s → Abandoned(四种来源全覆盖)",
+    async (source) => {
+      mockTodos(makeTodo("PVTI_1", "真实标题", source));
+      const res = await handleCardCallback(
+        ENV,
+        cbBody({ action: "abandon", itemId: "PVTI_1" }),
+      );
 
-    expect(updateItemStatus).toHaveBeenCalledTimes(1);
-    expect(updateItemStatus).toHaveBeenCalledWith(ENV, "PVTI_1", "Abandoned");
-    expect((res as any).toast).toEqual({ type: "success", content: "已放弃" });
-    expect(asJson(res)).not.toContain("真实标题"); // 终态从列表移除
-  });
+      expect(updateItemStatus).toHaveBeenCalledTimes(1);
+      expect(updateItemStatus).toHaveBeenCalledWith(ENV, "PVTI_1", "Abandoned");
+      expect((res as any).toast).toEqual({
+        type: "success",
+        content: "已放弃",
+      });
+      expect(asJson(res)).not.toContain("真实标题"); // 终态从列表移除
+    },
+  );
 });
 
 describe("9.3 旧卡片 / 非法来源:拒绝且不 mutation", () => {
   it("itemId 不在活跃列表(已 Done/Abandoned/删除/过期卡)→ /today 刷新,零 mutation", async () => {
     mockTodos(); // 空列表:fetchTodos 只返回活跃态,终态 item 天然查不到
-    const res = await handleCardCallback(ENV, cbBody({ action: "complete", itemId: "PVTI_gone" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "complete", itemId: "PVTI_gone" }),
+    );
     expect((res as any).toast.type).toBe("error");
     expect((res as any).toast.content).toContain("/today");
     expect(updateItemStatus).not.toHaveBeenCalled();
@@ -128,7 +154,10 @@ describe("9.3 旧卡片 / 非法来源:拒绝且不 mutation", () => {
 
   it("列表非空但目标 item 已终态 → 同样拒绝", async () => {
     mockTodos(makeTodo("PVTI_other", "别的任务", "Next"));
-    const res = await handleCardCallback(ENV, cbBody({ action: "start", itemId: "PVTI_gone" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "start", itemId: "PVTI_gone" }),
+    );
     expect((res as any).toast.content).toContain("/today");
     expect(updateItemStatus).not.toHaveBeenCalled();
   });
@@ -140,7 +169,10 @@ describe("9.3 旧卡片 / 非法来源:拒绝且不 mutation", () => {
     ["旧 Doing 卡点 complete,服务端已回 Next", "Next", "complete"],
   ])("%s → 拒绝,零 mutation", async (_name, serverStatus, action) => {
     mockTodos(makeTodo("PVTI_1", "真实标题", serverStatus));
-    const res = await handleCardCallback(ENV, cbBody({ action, itemId: "PVTI_1" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action, itemId: "PVTI_1" }),
+    );
     expect((res as any).toast.type).toBe("error");
     expect((res as any).toast.content).toContain("/today");
     expect(updateItemStatus).not.toHaveBeenCalled();
@@ -154,7 +186,10 @@ describe("9.3 旧卡片 / 非法来源:拒绝且不 mutation", () => {
       makeTodo("PVTI_d2", "d2", "Doing"),
       makeTodo("PVTI_d3", "d3", "Doing"),
     );
-    const res = await handleCardCallback(ENV, cbBody({ action: "complete", itemId: "PVTI_1" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "complete", itemId: "PVTI_1" }),
+    );
     expect((res as any).toast.content).toContain("/today");
     expect((res as any).toast.content).not.toContain("已满");
     expect(updateItemStatus).not.toHaveBeenCalled();
@@ -176,7 +211,10 @@ describe("9.4 不信任客户端 title", () => {
 
   it("乐观更新列表同样只用服务端标题", async () => {
     mockTodos(makeTodo("PVTI_1", "真实标题", "Next"));
-    const res = await handleCardCallback(ENV, cbBody({ action: "start", itemId: "PVTI_1", title: "伪造标题" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "start", itemId: "PVTI_1", title: "伪造标题" }),
+    );
     const json = asJson(res);
     expect(json).toContain("真实标题");
     expect(json).not.toContain("伪造标题");
@@ -192,8 +230,14 @@ describe("9.5 WIP(来源校验通过后才检查)", () => {
       makeTodo("PVTI_d2", "d2", "Doing"),
       makeTodo("PVTI_d3", "d3", "Doing"),
     );
-    const res = await handleCardCallback(ENV, cbBody({ action: "start", itemId: "PVTI_1" }));
-    expect((res as any).toast).toEqual({ type: "warning", content: "Doing 已满(3/3)" });
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "start", itemId: "PVTI_1" }),
+    );
+    expect((res as any).toast).toEqual({
+      type: "warning",
+      content: "Doing 已满(3/3)",
+    });
     expect(asJson(res)).toContain("已满");
     expect(updateItemStatus).not.toHaveBeenCalled();
   });
@@ -204,7 +248,10 @@ describe("9.5 WIP(来源校验通过后才检查)", () => {
       makeTodo("PVTI_d1", "d1", "Doing"),
       makeTodo("PVTI_d2", "d2", "Doing"),
     );
-    const res = await handleCardCallback(ENV, cbBody({ action: "start", itemId: "PVTI_1" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "start", itemId: "PVTI_1" }),
+    );
     expect(updateItemStatus).toHaveBeenCalledTimes(1);
     expect(updateItemStatus).toHaveBeenCalledWith(ENV, "PVTI_1", "Doing");
     expect((res as any).toast.type).toBe("success");
@@ -214,13 +261,19 @@ describe("9.5 WIP(来源校验通过后才检查)", () => {
 describe("9.6 complete 专项", () => {
   it("complete 也先调用 fetchTodos(不再跳过)", async () => {
     mockTodos(makeTodo("PVTI_1", "真实标题", "Doing"));
-    await handleCardCallback(ENV, cbBody({ action: "complete", itemId: "PVTI_1" }));
+    await handleCardCallback(
+      ENV,
+      cbBody({ action: "complete", itemId: "PVTI_1" }),
+    );
     expect(fetchTodos).toHaveBeenCalledTimes(1);
   });
 
   it("当前 Doing → Done 庆祝卡(服务端标题 + 奖励文案)", async () => {
     mockTodos(makeTodo("PVTI_1", "真实标题", "Doing"));
-    const res = await handleCardCallback(ENV, cbBody({ action: "complete", itemId: "PVTI_1" }));
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "complete", itemId: "PVTI_1" }),
+    );
     const json = asJson(res);
     expect((res as any).toast).toEqual({ type: "success", content: "已完成" });
     expect(json).toContain("真实标题");
@@ -228,18 +281,31 @@ describe("9.6 complete 专项", () => {
     expect(json).toContain("REWARD_STUB");
   });
 
-  it.each(["Backlog", "Next", "Paused"])("非 Doing(%s)点 complete → 拒绝,零 mutation", async (status) => {
-    mockTodos(makeTodo("PVTI_1", "真实标题", status));
-    const res = await handleCardCallback(ENV, cbBody({ action: "complete", itemId: "PVTI_1" }));
-    expect((res as any).toast.type).toBe("error");
-    expect((res as any).toast.content).toContain("/today");
-    expect(updateItemStatus).not.toHaveBeenCalled();
-  });
+  it.each(["Backlog", "Next", "Paused"])(
+    "非 Doing(%s)点 complete → 拒绝,零 mutation",
+    async (status) => {
+      mockTodos(makeTodo("PVTI_1", "真实标题", status));
+      const res = await handleCardCallback(
+        ENV,
+        cbBody({ action: "complete", itemId: "PVTI_1" }),
+      );
+      expect((res as any).toast.type).toBe("error");
+      expect((res as any).toast.content).toContain("/today");
+      expect(updateItemStatus).not.toHaveBeenCalled();
+    },
+  );
 
-  it("IO 异常 → error toast(错误脱敏保持原样透传 message,不在本 PR 改)", async () => {
+  it("IO 异常 → 固定脱敏 error toast,不透传原始 message", async () => {
     vi.mocked(fetchTodos).mockRejectedValue(new Error("boom"));
-    const res = await handleCardCallback(ENV, cbBody({ action: "start", itemId: "PVTI_1" }));
-    expect((res as any).toast).toEqual({ type: "error", content: "boom" });
+    const res = await handleCardCallback(
+      ENV,
+      cbBody({ action: "start", itemId: "PVTI_1" }),
+    );
+    expect((res as any).toast).toEqual({
+      type: "error",
+      content: "操作暂时失败,请稍后重试",
+    });
+    expect(JSON.stringify(res)).not.toContain("boom");
     expect(updateItemStatus).not.toHaveBeenCalled();
   });
 });
