@@ -103,7 +103,7 @@ agent 打开项目时,**先检测进度,路由到对应环节**:
 ```
 yeshu/
 ├── .github/workflows/
-│   ├── ci.yml             # PR 门禁:worker(typecheck+test+build)+ python(py_compile)— 已存在
+│   ├── ci.yml             # PR 门禁:worker(audit+typecheck+test+build)+ python(unittest+py_compile)— 已存在
 │   ├── daily-push.yml     # 每日 08:00 推送 — 已存在
 │   ├── wednesday-check.yml# 周三 20:00 体检(Phase 4,planned:尚未创建)
 │   └── weekly-review.yml  # 周日 20:00 review(Phase 6,planned:尚未创建)
@@ -266,7 +266,7 @@ act -W .github/workflows/daily-push.yml
 
 ### 4. 静态检查
 - `tsc --noEmit`(TypeScript 无报错)
-- `python3 --version`(必须 ≥ 3.11)+ `python3 -m py_compile scripts/*.py`(Python 无语法错)
+- `python3 --version`(必须 ≥ 3.11)+ Python unittest + `python3 -m py_compile scripts/*.py`
 - `pre-commit run --all-files`(如果装了 pre-commit hook)
 
 ---
@@ -278,16 +278,18 @@ act -W .github/workflows/daily-push.yml
 ```bash
 cd worker
 npm ci
-npm run check        # = typecheck && test && build
+npm run check        # = security audit && typecheck && test && build
 
 cd ..
 python3 --version       # 必须 >= 3.11
+python3 -m pip install -r requirements.txt
+python3 -m unittest discover -s scripts -p 'test_*.py'
 python3 -m py_compile scripts/*.py
 ```
 
 ### CI 要求
 
-- 门禁定义在 `.github/workflows/ci.yml`,含 **worker**(npm ci → typecheck → test → build)与 **python**(py_compile)两个 Job;
+- 门禁定义在 `.github/workflows/ci.yml`,含 **worker**(npm ci → security audit → typecheck → test → build)与 **python**(安装 requirements → unittest → py_compile)两个 Job;
 - **所有指向 main 的 PR 必须通过 worker 与 python 两个 required checks** 才可合并;
 - base 非 main 的 stacked PR 不会自动触发门禁,需 `gh workflow run ci.yml --ref <branch>` 手动触发并等绿后交付审查。
 
