@@ -1,6 +1,6 @@
 # 野薯项目状态
 
-> 快照时间:2026-08-08。本页是项目当前状态的**唯一事实页**:其他文档(DEV-PLAN / AGENTS / HANDOFF / GOAL)引用本页,不复制状态。
+> 快照时间:2026-08-12。本页是项目当前状态的**唯一事实页**:其他文档(DEV-PLAN / AGENTS / HANDOFF / GOAL)引用本页,不复制状态。
 
 ## 三轴状态
 
@@ -9,7 +9,7 @@
 | V1-a 每日推送 | merged | active | collecting |
 | V1-b Worker | merged | deployed | collecting |
 | V2-a 交互状态机 | merged / CI green | deployed and verified | collecting |
-| Reliability Hardening | current engineering goal complete | 幂等后端尚未启用 | not applicable |
+| Reliability Continuation | Python daily-push 分页已实现,PR #20 CI 绿 | 幂等后端尚未启用 | not applicable |
 | V2-b | paused | not deployed | not started |
 
 三轴含义:
@@ -35,17 +35,18 @@
    4. curl smoke test(GET / 200 + challenge 原样回显 + 错误 token fail-closed);
    5. 飞书原生测试(/add 建卡、/today 分组卡、按钮全流转、旧卡片拒绝)。
 7. **行为验证与工程门槛分离**:工程达标(CI / 测试 / 审查)只决定是否允许合并;产品阶段晋级由行为数据决定(66 天按钮完成 ≥ 30 次,spec §14.1),二者不互相替代。行为数据仍 collecting。
-8. 当前 Reliability Hardening 自动化工程 Goal 已收口,下一步是人工决定幂等生产启用与 Branch Protection;不是应用主页、段位成就或前端美化。V2-a 行为验证仍在 collecting,当前不启动新的产品功能。
+8. 当前 Reliability Continuation 只处理不越过行为门槛的查询正确性;Python daily-push cursor 分页已由 PR #20 实现并通过远程 CI。下一步仍是完成工程合并,再由用户决定幂等生产启用与 Branch Protection;不是应用主页、段位成就或前端美化。V2-a 行为验证仍在 collecting,当前不启动新的产品功能。
 9. 持久化幂等核心的工程基线 commit 为 `422e32c39943e8a38f9b95a4385ca57e414eb0d1`:Tablestore 适配器、配置校验和 264 项测试已合并,但 Tablestore 资源准备、生产配置与从 main 部署尚未执行。因此生产仍运行 `eb20515c` 的 V2-a 基线,不能声称幂等已在线生效;当前 main tip 应实时查询 GitHub 分支,不在本文固定。
 10. 2026-08-06 接手审计发现 Hono `<4.12.34` 新披露的 moderate CORS ReDoS 漏洞;PR #14 已把最低版本提升至官方修复下限并解析到 `4.13.0`,2026-08-08 以 squash commit `65d1a4c` 合并 main,`npm audit` 为 0,CI worker/python 双绿。
 11. **Phase DoD 证据缺口**:`docs/screenshots/` 当前只有 `.gitkeep`,没有 V0/V1/V2 关键交互截图。V2-a 可以确认“工程合并 + 生产功能验证完成”,但不能声称 AGENTS.md 定义的完整 Phase DoD 已闭环;截图与行为门槛都待用户侧真实证据补齐。
 12. 2026-08-08 GitHub API 核验:`main` 尚未启用 Branch Protection。CI workflow 与历史 worker/python 绿灯真实存在,但“required checks”目前是项目流程要求,不是平台强制规则;是否启用保护需用户确认。
 13. 当前接管 Goal 与任务边界见 [GOAL.md](../GOAL.md)。PR #14/#15/#16 已合并;Worker ProjectV2 cursor 分页的工程基线为 `main@69f6de4`,当前 17 个测试文件 / 293 项通过、生产依赖 audit 0、typecheck/build/Python 3.11 py_compile 与远程 CI 全绿。这些合并未触发生产部署,生产仍运行 `eb20515c`。
+14. Issue #19 / PR #20 为 Python daily-push 独立正确性切片:`scripts/fetch_data.py` 已使用 `after` + `pageInfo.hasNextPage/endCursor` 遍历 ProjectV2 items,新增 4 项标准库 unittest,PR 的 worker/python CI 双绿。该 PR 当前未改变生产 FC 或每日推送的部署授权边界。
 
 ## 剩余可靠性工作(Reliability Hardening 清单)
 
 - `event_id` / `message_id` 幂等:**工程核心已完成**(`main@422e32c`),待人工准备 Tablestore / 最小权限 RAM 身份、隔离环境实测、从 main 部署与生产重投验证;未部署前线上仍可能重复建卡 / 重复状态转换;
-- GraphQL 分页:Worker `fetchTodos` / `countItemsByStatus` 已由 PR #16 完成 cursor 分页;Python 每日推送 `scripts/fetch_data.py` 仍固定 `items(first:50)`,超过 50 项可能漏任务,留作后续独立正确性切片;
+- GraphQL 分页:Worker `fetchTodos` / `countItemsByStatus` 已由 PR #16 完成 cursor 分页;Python 每日推送已由 PR #20 实现 cursor 分页并通过远程 CI,待按正常审查流程合并;
 - WIP 并发保护:当前检查与写入非原子(TOCTOU),但项目为单用户且暂无真实并发越限证据;按克制原则暂缓,出现现实触发证据再设计锁;
 - 外部 API timeout / retry:**本次接手切片已实现并完成本地门禁**:默认 2 秒 HTTP 超时(AI 生成请求为 5 秒),且覆盖响应头与 JSON body;只有 GitHub query 对 timeout / network / 408 / 425 / 429 / 5xx 做一次有界重试;GitHub mutation、飞书发卡片、AI 请求不自动重试;
 - 错误脱敏:**本次接手切片已实现并完成本地门禁**:外部响应体 / GraphQL errors 不进入异常或用户卡片/toast,日志仅保留服务名、错误类别、HTTP 状态等结构化字段;飞书 HTTP 200 非零业务码会清 token 缓存,下一次用户操作重新取 token;
