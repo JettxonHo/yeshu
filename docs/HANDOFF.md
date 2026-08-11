@@ -10,10 +10,12 @@ cp .env.example .env               # 填入真实值(.env 不进 git)
 
 cd worker
 npm ci
-npm run check                      # typecheck + test + build 一把过
+npm run check                      # audit + typecheck + test + build 一把过
 
 cd ..
 python3 --version                     # 必须 >= 3.11
+python3 -m pip install -r requirements.txt
+python3 -m unittest discover -s scripts -p 'test_*.py'
 python3 -m py_compile scripts/*.py
 ```
 
@@ -36,7 +38,7 @@ python3 -m py_compile scripts/*.py
 ## 4. 当前开发边界
 
 - **架构**:阿里云 FC Worker(Hono;实时 `/add` `/today` + 卡片按钮回调)+ GitHub Actions(每日 08:00 推送)+ GitHub Projects V2(任务真相源)+ 飞书(交互入口)。
-- **工程重点**:Reliability Hardening(幂等 / 分页 / 并发保护 / timeout / 错误脱敏 / 部署回滚)。下一项**不是**应用主页、段位成就、多维表格看板。
+- **工程状态**:当前自动化 Reliability Continuation 已收口。下一步只包括用户决定生产幂等与 Branch Protection,以及补真实行为计数/截图;行为门槛未达标前**不是**应用主页、段位成就、多维表格看板。
 - **工程坑位**(改代码前必读):
   1. 飞书带按钮卡片**必须用 V1 格式**(顶层 elements + `config.wide_screen`);V2 schema 2.0 不支持 `tag:"action"`(错误码 230099)。
   2. 卡片回调用 Method A 就地更新(200 响应直接返回新卡,单往返)。
@@ -53,6 +55,8 @@ npm run check
 
 cd ..
 python3 --version                     # 必须 >= 3.11
+python3 -m pip install -r requirements.txt
+python3 -m unittest discover -s scripts -p 'test_*.py'
 python3 -m py_compile scripts/*.py
 ```
 
@@ -71,6 +75,6 @@ CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker +
 
 ## 7. 已知风险入口
 
-- **剩余可靠性债务**:见 [docs/STATUS.md](STATUS.md) "剩余可靠性工作" 一节(event_id 幂等、GraphQL 分页、WIP 并发保护、timeout/retry、错误脱敏、部署回滚、daily-push TS 化、Encrypt Key 评估)。以该清单为准,本文件不复制。
+- **开放事项**:见 [docs/STATUS.md](STATUS.md) "剩余可靠性工作" 一节。当前可行动项只有 Issue #12(人工启用生产幂等)、Issue #13(Branch Protection 决策)与真实行为/截图证据;WIP 锁、语言重写、Encrypt Key 等延期项只在出现现实证据后重开。
 - **历史字段迁移**:`docs/migrations/`(GitHub Projects 字段六状态化已于 2026-07-24 完成;一次性脚本已删除,禁止重演)。
 - **审计过程稿**:`docs/audits/` 为本地未入库工作区,不是事实依据。
