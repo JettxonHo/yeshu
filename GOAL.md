@@ -1,10 +1,10 @@
-# 野薯当前 Goal · Reliability Hardening
+# 野薯当前 Goal · Reliability Continuation
 
-> 建立:2026-08-08
+> 建立:2026-08-12
 >
-> 状态:COMPLETE_ENGINEERING / HUMAN_ACTION_PENDING
+> 状态:ACTIVE_ENGINEERING / HUMAN_ACTION_PENDING
 >
-> Goal-ID:Codex task `019fd4e9-0624-7580-a012-7921d1dc1c1f`
+> Goal 模式:按照既定阶段门槛继续完成可自动推进的工程任务
 >
 > 产品边界:[Product-Spec.md](Product-Spec.md)
 >
@@ -12,20 +12,20 @@
 
 ## 1. 执行摘要
 
-项目已具备 V1-a、V1-b、V2-a 的工程能力，生产 Worker 仍停在 V2-a 部署基线。当前 Goal 只做有现实触发路径的可靠性收口，不扩张 V2-b 或后续产品功能。
+项目已具备 V1-a、V1-b、V2-a 的工程能力，生产 Worker 仍停在 V2-a 部署基线。本轮继续处理有现实价值且不依赖生产权限的工程债务；首个切片是 Python 每日推送的 ProjectV2 cursor 分页与 CI 测试，不扩张 V2-b 或后续产品功能。
 
 ## 2. 当前状态
 
-- Engineering:`main@69f6de4` 已含持久化幂等核心、外部 HTTP 边界修复、接管治理与 Worker ProjectV2 cursor 分页；PR #14/#15/#16 CI 双绿并已合并。
+- Engineering:`main@d713b2b` 已含持久化幂等核心、外部 HTTP 边界修复、接管治理、Worker ProjectV2 cursor 分页与上一轮 Goal 收口；Issue #19 的 Python 每日推送分页切片进行中。
 - Production:仍运行 `eb20515c`；幂等后端未启用。
 - Validation:V0/V1/V2 行为门槛仍 collecting；截图 DoD 未闭环。
 
 ## 3. 仓库与 GitHub 快照
 
 - 仓库:`JettxonHo/yeshu`，public，默认分支 `main`。
-- 2026-08-08 接管时开放 Issue=0、开放 PR=0、Milestone=0；接管后建立 Milestone #1 与 Issues #9-#13/#17，并合并 PR #14-#16。
+- 2026-08-08 接管后建立 Milestone #1 与 Issues #9-#13/#17，并合并 PR #14-#16/#18；2026-08-12 新建 Issue #19 继续 Python 查询正确性收口。
 - CI workflow 存在且历史运行成功，但 GitHub API 返回 `main` 未启用 Branch Protection，因此 required checks 尚未由平台强制。
-- 当前本地分支:`codex/reliability-goal-closeout`；`docs/audits/` 是未跟踪用户材料，不纳入自动提交。
+- 当前本地分支:`codex/daily-push-pagination`；`docs/audits/` 是未跟踪用户材料，不读取、不修改、不纳入自动提交。
 
 ## 4. 产品范围
 
@@ -44,13 +44,14 @@ Goal:
 1. 合并外部 HTTP 超时、安全重试边界、错误脱敏与 Hono 依赖修复；
 2. 补齐 Worker 的 GitHub ProjectV2 cursor 分页，消除 50/100 项截断；
 3. 建立可复用的 Goal、Issue、Task Contract、PR、审查与测试记录；
-4. 把持久化幂等生产启用整理为可执行的人工任务。
+4. 把持久化幂等生产启用整理为可执行的人工任务；
+5. 为 Python 每日推送补齐 ProjectV2 cursor 分页和可执行的 Python CI 测试。
 
 非 Goal:生产部署、读取生产凭证、自动修改 Branch Protection、扩大产品范围、为低概率 case 堆防御、引入哈希/SHA-256。
 
 ## 7. 已定与待定决策
 
-已定:Worker GraphQL 分页已完成；mutation 不自动重试；产品行为门槛与工程门禁分开。待用户决定:是否启用 `main` Branch Protection；何时准备 Tablestore/RAM 并从 main 人工部署。
+已定:Worker GraphQL 分页已完成；Python 每日推送分页按 Issue #19 独立推进；mutation 不自动重试；产品行为门槛与工程门禁分开。待用户决定:是否启用 `main` Branch Protection；何时准备 Tablestore/RAM 并从 main 人工部署。
 
 ## 8. 当前架构
 
@@ -79,7 +80,7 @@ TypeScript strict、Hono、Node.js 20、Vitest、esbuild、阿里云 FC 3.0、Ta
 按当前价值排序:
 
 1. 生产幂等未启用——现实重复 mutation 风险，但受人工云资源/部署阻塞；
-2. Python 每日推送仍固定 `items(first:50)`——当前 workflow 连续成功，超过 50 项时可能漏任务；作为后续独立正确性切片，不混入本 Goal；
+2. Python 每日推送仍固定 `items(first:50)`——当前 workflow 连续成功，超过 50 项时可能漏任务；Issue #19 正在修复；
 3. `/add` 多步 mutation 可能留下无状态 item——先观察真实发生率，再决定补偿方案；
 4. WIP TOCTOU——单用户低并发，暂缓，出现真实越限证据再设计锁；
 5. 部署版本/回滚未工具化——保留人工 runbook，暂不自动部署。
@@ -90,6 +91,7 @@ TypeScript strict、Hono、Node.js 20、Vitest、esbuild、阿里云 FC 3.0、Ta
 - M2 查询正确性:Worker ProjectV2 cursor 分页已由 Luna 实现，经主控 `APPROVED` 与 CI 后由 PR #16 合并。
 - M3 运维就绪:幂等生产任务 #12 具备清晰人工前置、验证与回退条件；Agent 不代替用户执行。
 - M4 Goal 收口:Issue #17 同步最终状态；无未解释的自动化工程 blocker，行为验证继续独立收集。
+- M5 Actions 查询正确性:Issue #19 完成 Python ProjectV2 cursor 分页、单元测试、独立审查与 CI 合并。
 
 ## 14. 首批 Issues
 
@@ -99,6 +101,7 @@ TypeScript strict、Hono、Node.js 20、Vitest、esbuild、阿里云 FC 3.0、Ta
 4. [#12 Tablestore 幂等生产启用](https://github.com/JettxonHo/yeshu/issues/12)（人工/外部阻塞）；
 5. [#13 `main` Branch Protection 决策](https://github.com/JettxonHo/yeshu/issues/13)（需用户确认）。
 6. [#17 Reliability Hardening 工程状态收口](https://github.com/JettxonHo/yeshu/issues/17)。
+7. [#19 Python 每日推送 ProjectV2 cursor 分页](https://github.com/JettxonHo/yeshu/issues/19)。
 
 ## 15. Task Contract
 
@@ -124,11 +127,11 @@ Task Contract 的必填字段与 Result Packet 见 [docs/agent-collaboration.md]
 
 ## 20. 开放问题与下一步
 
-自动化工程范围已收口。后续需要用户决定两件事:是否启用 Branch Protection、何时进行幂等生产启用；在明确授权前保持 #12/#13 OPEN。V0/V1/V2 行为计数与截图继续由用户提供真实证据。
+当前先完成 Issue #19；合并后自动化范围只剩缺乏现实触发证据而明确延期的旧债务。随后需要用户决定两件事:是否启用 Branch Protection、何时进行幂等生产启用；在明确授权前保持 #12/#13 OPEN。V0/V1/V2 行为计数与截图继续由用户提供真实证据。
 
 ## Goal 完成标准
 
-- M1/M2 的 PR 均合并且 CI 绿；
+- M1/M2/M5 的 PR 均合并且 CI 绿；
 - 所有工程 Issue 有明确完成、延期理由或人工 blocker；
 - `docs/STATUS.md`、`DEV-PLAN.md` 与 GitHub 状态一致；
 - 不声称生产幂等、行为门槛或截图 DoD 已完成，除非有真实证据。
