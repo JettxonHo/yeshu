@@ -35,10 +35,11 @@ def read_env(key: str) -> str:
 def fetch_project_items(token: str, login: str, number: int) -> list[dict]:
     """GraphQL 查项目卡片 + Status 字段,返回 items 节点。失败则友好退出。"""
     query = """
-    query($login: String!, $number: Int!) {
+    query($login: String!, $number: Int!, $after: String) {
       user(login: $login) {
         projectV2(number: $number) {
-          items(first: 50) {
+          items(first: 50, after: $after) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               content { ...on DraftIssue { title } ...on Issue { title number url } }
               fieldValues(first: 10) {
@@ -55,23 +56,34 @@ def fetch_project_items(token: str, login: str, number: int) -> list[dict]:
       }
     }
     """
-    try:
-        resp = requests.post(
-            GRAPHQL_URL,
-            json={"query": query, "variables": {"login": login, "number": number}},
-            headers={"Authorization": f"bearer {token}"},
-            timeout=30,
-        )
-        resp.raise_for_status()
-    except requests.RequestException as e:
-        print(f"✗ GitHub GraphQL 请求失败:{e}", file=sys.stderr)
-        sys.exit(1)
+    items: list[dict] = []
+    after: str | None = None
+    while True:
+        try:
+            resp = requests.post(
+                GRAPHQL_URL,
+                json={
+                    "query": query,
+                    "variables": {"login": login, "number": number, "after": after},
+                },
+                headers={"Authorization": f"bearer {token}"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+        except requests.RequestException as e:
+            print(f"✗ GitHub GraphQL 请求失败:{e}", file=sys.stderr)
+            sys.exit(1)
 
-    data = resp.json()
-    if "errors" in data:
-        print(f"✗ GitHub GraphQL 返回错误:{data['errors']}", file=sys.stderr)
-        sys.exit(1)
-    return data["data"]["user"]["projectV2"]["items"]["nodes"]
+        data = resp.json()
+        if "errors" in data:
+            print(f"✗ GitHub GraphQL 返回错误:{data['errors']}", file=sys.stderr)
+            sys.exit(1)
+
+        connection = data["data"]["user"]["projectV2"]["items"]
+        items.extend(connection["nodes"])
+        if not connection["pageInfo"]["hasNextPage"]:
+            return items
+        after = connection["pageInfo"]["endCursor"]
 
 
 def extract_todos(items: list[dict]) -> list[dict]:
