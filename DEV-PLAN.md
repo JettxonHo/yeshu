@@ -2,7 +2,7 @@
 
 > **版本**:2.1(2026-08-12 修订)
 > **本次修订**:用户明确把 66 天/≥30 次改为长期指标;V2-b 硬验收完成,进入 V3-a
-> **状态**:Phase 5(V3-a)⏳ Goal active / first Task Contract ready
+> **状态**:Phase 5(V3-a)⏳ Docs create/read merged / text writer Task Contract ready
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -44,12 +44,12 @@
 📊 项目进度检测
 - Product Spec:✅(产品决策单一真相源)
 - DEV-PLAN   :✅(本文件 v2.1)
-- 项目代码   :✅(V2-b hard acceptance complete;V3-a 尚无代码)
-当前环节:Phase 5 · V3-a Docs OpenAPI 基础
-  - Engineering :V2-b PR #24 + E2E 证据 PR #28 已合并;V3-a Issue #29 已建立
+- 项目代码   :✅(V2-b hard acceptance complete;V3-a Docs create/read merged)
+当前环节:Phase 5 · V3-a 文档正文写入基础
+  - Engineering :Issue #29 / PR #32 已合并为 main@90bc964;302 项 Worker 测试与 CI 全绿
   - Production  :线上 FC 仍运行 main@eb20515c 的 V2-a;V2-b Actions active
   - Validation  :66 天/≥30 次作为长期指标 collecting,不阻塞 V3
-下一步:Issue #29 实现飞书 Docs OpenAPI 基础适配器 → 独立审查 → PR CI
+下一步:Issue #33 实现根 Page Block 正文写入 → 独立审查 → PR CI
 ```
 
 ---
@@ -227,7 +227,8 @@
 
 - **目标**:实现 spec §8 写作子系统——飞书云文档为唯一写作入口,生产通过 Docs/Drive OpenAPI 创建文档与读取元数据,提供 `/note` `/draft` `/drafts` 命令和草稿进度监控。V3 内容闭环核心
 - **完成标准**:
-  - [ ] `worker/src/lib/lark.ts`:飞书 Docs OpenAPI 封装(创建云文档 / 拉纯文本与元数据)
+  - [x] `worker/src/lib/lark.ts`:飞书 Docs OpenAPI 创建云文档 / 拉纯文本基础(PR #32)
+  - [ ] `worker/src/lib/lark.ts`:根 Page Block 正文写入(Issue #33)
   - [ ] `worker/src/commands/{note,draft,drafts}.ts`
   - [ ] 云文档目录结构(§8.3)
   - [ ] 草稿目标字数机制(§8.4)
@@ -239,7 +240,7 @@
 - **依赖**:Phase 4
 - **测试**:OpenAPI mock 合同 + 人工权限就绪后的飞书云文档 E2E;飞书收到草稿进度卡
 - **工作量**:5–7 天
-- **状态**:⏳ Goal active。首个 Task Contract 为 Issue #29,仅建立 FC 可用的 Docs OpenAPI 适配器;不把 `/note`、`/draft`、目录配置和生产权限混入一个提交。
+- **状态**:⏳ Goal active。Issue #29 / PR #32 已完成 FC 可用的文档创建与纯文本读取;Issue #33 仅补正文块写入,之后再进入 `/note`。目录配置、命令路由与生产权限仍分开推进。
 
 ---
 
@@ -328,7 +329,7 @@
 2. **幂等生产启用单独推进**:等待用户决定,之后人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
 3. **Branch Protection 单独决策**:GitHub 当前未强制 required checks,未经用户确认不修改仓库设置;
 4. **克制处理其余旧债务**:WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
-5. **V3-a 已启动**:用户于 2026-08-12 明确调整 Product-Spec 门槛;Issue #29 先实现 Docs OpenAPI 基础,后续再按 `/note` → `/draft`/映射 → `/drafts`/监控拆分;
+5. **V3-a 正在推进**:Issue #29 / PR #32 已完成文档创建与纯文本读取;官方创建接口不能带正文,因此 Issue #33 先补根块文本写入,再按 `/note` → `/draft`/映射 → `/drafts`/监控拆分;
 6. **长期指标不伪造**:66 天窗口最早于 2026-10-06 结束,当前没有按钮完成计数证据;继续记录为 collecting,但不阻塞 V3 工程。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*
