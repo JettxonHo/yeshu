@@ -291,6 +291,7 @@ python3 -m py_compile scripts/*.py
 
 - 门禁定义在 `.github/workflows/ci.yml`,含 **worker**(npm ci → security audit → typecheck → test → build)与 **python**(安装 requirements → unittest → py_compile)两个 Job;
 - **所有指向 main 的 PR 必须通过 worker 与 python 两个 required checks** 才可合并;
+- GitHub active Repository Ruleset `main 门禁` 对 `refs/heads/main` 强制 PR 与 strict `worker`/`python`;管理员角色虽存在平台 bypass,普通开发禁止使用;
 - base 非 main 的 stacked PR 不会自动触发门禁,需 `gh workflow run ci.yml --ref <branch>` 手动触发并等绿后交付审查。
 
 ### 禁止事项
