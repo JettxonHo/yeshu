@@ -38,7 +38,7 @@ python3 -m py_compile scripts/*.py
 ## 4. 当前开发边界
 
 - **架构**:阿里云 FC Worker(Hono;实时 `/add` `/today` + 卡片按钮回调)+ GitHub Actions(每日 08:00 推送)+ GitHub Projects V2(任务真相源)+ 飞书(交互入口)。
-- **工程状态**:V2-b 已由 PR #24 合并到 `main@4b8c6df`,Actions→飞书 E2E 与截图由 PR #28 收口。V3-a 的文档创建/读取/正文/元数据已由 PR #32/#35/#39 合并至 `main@95ee460`;当前 Task Contract 为 Issue #40(Project Text 写入),`/note` 产品细节仍待确认。Issue #12 生产幂等与 #13 Branch Protection 仍独立待用户决定。
+- **工程状态**:V2-b 已由 PR #24 合并到 `main@4b8c6df`,Actions→飞书 E2E 与截图由 PR #28 收口。V3-a 的 Docs 与 Project Text 基础已由 PR #32/#35/#39/#42 合并至 `main@7b17a5c`;下一步为 `/note` 产品设计确认。Issue #12 生产幂等仍独立待人工推进;main 门禁 ruleset 已启用。
 - **工程坑位**(改代码前必读):
   1. 飞书带按钮卡片**必须用 V1 格式**(顶层 elements + `config.wide_screen`);V2 schema 2.0 不支持 `tag:"action"`(错误码 230099)。
   2. 卡片回调用 Method A 就地更新(200 响应直接返回新卡,单往返)。
@@ -60,7 +60,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 python3 -m py_compile scripts/*.py
 ```
 
-CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker + python** 两个 Job,项目流程要求全绿。2026-08-08 核验时 GitHub 尚未启用 Branch Protection,所以平台未强制 required checks;是否开启需用户确认。base 非 main 的 stacked PR 不自动触发,需手动 `gh workflow run ci.yml --ref <branch>` 并等绿后再交付审查。
+CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker + python** 两个 Job。active Repository Ruleset `main 门禁` 对 `refs/heads/main` 强制 PR 与 strict required checks `worker`/`python`;管理员角色虽存在 always bypass,普通开发禁止使用。base 非 main 的 stacked PR 不自动触发,需手动 `gh workflow run ci.yml --ref <branch>` 并等绿后再交付审查。
 
 ## 6. 部署原则
 
@@ -75,6 +75,6 @@ CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker +
 
 ## 7. 已知风险入口
 
-- **开放事项**:见 [docs/STATUS.md](STATUS.md)。当前工程路由为 V3-a Issue #40;`/note` 仍需确认内部 ID、tag 与笔记文件夹 token。真实 Project 字段需具备 `read:project`/`project` scope 后核验。66 天/≥30 次最早于 2026-10-06 完成观察,继续长期记录但不阻塞。Issue #12(生产幂等)与 #13(Branch Protection)仍独立开放。WIP 锁、语言重写、Encrypt Key 等延期项只在出现现实证据后重开。
+- **开放事项**:见 [docs/STATUS.md](STATUS.md)。当前路由为 V3-a `/note` 设计确认;需确认内部 ID、tag 与笔记文件夹 token。真实 Project 字段需具备 `read:project`/`project` scope 后核验。66 天/≥30 次最早于 2026-10-06 完成观察,继续长期记录但不阻塞。Issue #12(生产幂等)仍开放;Issue #13 可按既存 main ruleset 关闭。WIP 锁、语言重写、Encrypt Key 等延期项只在出现现实证据后重开。
 - **历史字段迁移**:`docs/migrations/`(GitHub Projects 字段六状态化已于 2026-07-24 完成;一次性脚本已删除,禁止重演)。
 - **审计过程稿**:`docs/audits/` 为本地未入库工作区,不是事实依据。

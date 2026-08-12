@@ -2,7 +2,7 @@
 
 > **版本**:2.1(2026-08-12 修订)
 > **本次修订**:用户明确把 66 天/≥30 次改为长期指标;V2-b 硬验收完成,进入 V3-a
-> **状态**:Phase 5(V3-a)⏳ Project text field Task Contract ready / note design approval required
+> **状态**:Phase 5(V3-a)⏳ Foundations merged / note design approval required
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -45,11 +45,11 @@
 - Product Spec:✅(产品决策单一真相源)
 - DEV-PLAN   :✅(本文件 v2.1)
 - 项目代码   :✅(V2-b hard acceptance complete;V3-a Docs create/read/write merged)
-当前环节:Phase 5 · V3-a Project 文本字段写入
-  - Engineering :Issue #29/#33/#37 由 PR #32/#35/#39 合并至 main@95ee460;314 项 Worker 测试与 CI 全绿
+当前环节:Phase 5 · V3-a `/note` 设计确认
+  - Engineering :Issue #29/#33/#37/#40 由 PR #32/#35/#39/#42 合并至 main@7b17a5c;320 项 Worker 测试与 CI 全绿
   - Production  :线上 FC 仍运行 main@eb20515c 的 V2-a;V2-b Actions active
   - Validation  :66 天/≥30 次作为长期指标 collecting,不阻塞 V3
-下一步:Issue #40 实现 `Related Doc` Text 字段写入 → 独立审查 → PR CI;并行等待 `/note` 内部 ID/tag/文件夹 token 设计确认
+下一步:确认 `/note` 内部 ID/tag/文件夹 token → 先修 Product-Spec → 建立 `/note` 垂直 Task Contract
 ```
 
 ---
@@ -230,7 +230,7 @@
   - [x] `worker/src/lib/lark.ts`:飞书 Docs OpenAPI 创建云文档 / 拉纯文本基础(PR #32)
   - [x] `worker/src/lib/lark.ts`:根 Page Block 正文写入(PR #35)
   - [x] `worker/src/lib/lark.ts`:批量文档元数据(URL / latest_modify_time,PR #39)
-  - [ ] `worker/src/lib/github.ts`:ProjectV2 Text 字段写入(Issue #40)
+  - [x] `worker/src/lib/github.ts`:ProjectV2 Text 字段写入(PR #42)
   - [ ] `worker/src/commands/{note,draft,drafts}.ts`
   - [ ] 云文档目录结构(§8.3)
   - [ ] 草稿目标字数机制(§8.4)
@@ -242,7 +242,7 @@
 - **依赖**:Phase 4
 - **测试**:OpenAPI mock 合同 + 人工权限就绪后的飞书云文档 E2E;飞书收到草稿进度卡
 - **工作量**:5–7 天
-- **状态**:⏳ Goal active。Issue #29/#33/#37 已完成文档创建、读取、正文与元数据能力;Issue #40 为 `Related Doc` 增加 ProjectV2 Text 写入。`/note` 内部 ID/tag/目录 token 仍待确认,生产权限分开推进。
+- **状态**:⏳ Goal active。Issue #29/#33/#37/#40 已完成文档创建、读取、正文、元数据与 Project Text 写入基础。下一步直接进入 `/note` 垂直切片,但内部 ID/tag/目录 token 需用户确认;生产权限分开推进。
 
 ---
 
@@ -329,9 +329,9 @@
 
 1. **V2-b 工程已完成**:Issue #23 / PR #24 已合并,Python 17 项与 Worker 293 项测试、独立审查、CI 双绿;
 2. **幂等生产启用单独推进**:等待用户决定,之后人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
-3. **Branch Protection 单独决策**:GitHub 当前未强制 required checks,未经用户确认不修改仓库设置;
+3. **main 门禁已核验**:active Repository Ruleset 强制 PR 与 strict `worker`/`python`;管理员 bypass 仅作平台能力保留,普通开发禁止使用。本次只纠正文档,未修改仓库设置;
 4. **克制处理其余旧债务**:WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
-5. **V3-a 正在推进**:PR #32/#35/#39 已完成 Docs 创建、读取、正文和元数据;Issue #40 先补 Project Text 映射能力,同时等待 `/note` 设计确认,再按 `/note` → `/draft`/映射 → `/drafts`/监控拆分;
+5. **V3-a 正在推进**:PR #32/#35/#39/#42 已完成 Docs 创建、读取、正文、元数据和 Project Text 写入基础;等待 `/note` 设计确认后,按 `/note` → `/draft`/映射 → `/drafts`/监控拆分;
 6. **长期指标不伪造**:66 天窗口最早于 2026-10-06 结束,当前没有按钮完成计数证据;继续记录为 collecting,但不阻塞 V3 工程。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*

@@ -2,7 +2,7 @@
 
 > 建立:2026-08-12
 >
-> 状态:ACTIVE / PROJECT_TEXT_TASK_CONTRACT_READY
+> 状态:ACTIVE / NOTE_DESIGN_APPROVAL_REQUIRED
 >
 > 产品边界:[Product-Spec.md](Product-Spec.md) §8、§14.1
 >
@@ -20,10 +20,10 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 
 ## 2. 当前状态
 
-- Engineering:V3-a Docs 创建/读取/正文写入/元数据读取已由 PR #32/#35/#39 合并至 `main@95ee460`;314 项 Worker 测试与 PR CI 全绿。
+- Engineering:V3-a Docs 基础与 Project Text 写入已由 PR #32/#35/#39/#42 合并至 `main@7b17a5c`;320 项 Worker 测试与 PR CI 全绿。
 - Production:Worker 仍运行 `main@eb20515c` 的 V2-a;V2-b Actions active。
 - Validation:66 天/≥30 次仍 unverified;作为长期指标并行观察。
-- Contract:[Issue #40 · GitHub Project text field writer](https://github.com/JettxonHo/yeshu/issues/40) 已建立;`/note` 产品细节仍待确认。
+- Contract:Issue #40 已关闭;`/note` 产品细节确认后先修 Product-Spec,再建立命令 Task Contract。
 
 ## 3. Goal
 
@@ -61,10 +61,9 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 - M4 `/drafts`:进度视图与 3 天/7 天提醒;
 - M5 产品验收:真实飞书完成首篇 Show 发布并保存截图。
 
-## 7. 当前 Task Contract
+## 7. 下一决策点
 
-- Issue #40 只允许修改 `worker/src/lib/github.ts` 与 `worker/src/lib/external-clients.test.ts`,增加 ProjectV2 Text 字段写入。
-- 该切片为后续 Show↔文档的 `Related Doc` 映射提供能力;不查找/创建 Show,不改变 1:1/1:N 产品策略。
+- Docs 创建/读取/正文/元数据与 ProjectV2 Text 写入均已工程合并;下一步不再增加水平基础切片。
 - `/note` 仍需确认内部 ID、tag 与笔记文件夹 token 的最小方案;涉及 Product-Spec §8.2.2 的决策先改 spec,再建命令 Issue。
 - 保持不新增依赖、不运行 lark-cli、不触生产 API、不读取凭据。
 - `docs/audits/` 是用户材料,不读取、不修改、不暂存。
