@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-项目已进入 V2-b 工程开发，生产仍运行 V2-a，行为验证继续收集。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
+V2-b 工程已合并，生产仍运行 V2-a；真实 Actions/飞书端到端、截图与行为验证继续收集。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
 
 ## 开发入口
 
