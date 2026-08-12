@@ -38,7 +38,7 @@ python3 -m py_compile scripts/*.py
 ## 4. 当前开发边界
 
 - **架构**:阿里云 FC Worker(Hono;实时 `/add` `/today` + 卡片按钮回调)+ GitHub Actions(每日 08:00 推送)+ GitHub Projects V2(任务真相源)+ 飞书(交互入口)。
-- **工程状态**:V2-b 已由 PR #24 合并到 `main@4b8c6df`,Actions→飞书 E2E 与截图由 PR #28 收口。V3-a 的文档创建/读取/正文写入已由 PR #32/#35 合并至 `main@d0d09e6`;下一步先确认 `/note` 产品细节再建 Task Contract。Issue #12 生产幂等与 #13 Branch Protection 仍独立待用户决定。
+- **工程状态**:V2-b 已由 PR #24 合并到 `main@4b8c6df`,Actions→飞书 E2E 与截图由 PR #28 收口。V3-a 的文档创建/读取/正文写入已由 PR #32/#35 合并至 `main@d0d09e6`;当前 Task Contract 为 Issue #37(正确 URL 与修改时间元数据),`/note` 产品细节仍待确认。Issue #12 生产幂等与 #13 Branch Protection 仍独立待用户决定。
 - **工程坑位**(改代码前必读):
   1. 飞书带按钮卡片**必须用 V1 格式**(顶层 elements + `config.wide_screen`);V2 schema 2.0 不支持 `tag:"action"`(错误码 230099)。
   2. 卡片回调用 Method A 就地更新(200 响应直接返回新卡,单往返)。
@@ -75,6 +75,6 @@ CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker +
 
 ## 7. 已知风险入口
 
-- **开放事项**:见 [docs/STATUS.md](STATUS.md)。当前产品开发路由为 V3-a `/note` 设计确认;内部 ID、tag、笔记文件夹 token 与文档域名确定后再建 Issue。66 天/≥30 次最早于 2026-10-06 完成观察,继续长期记录但不阻塞。Issue #12(生产幂等)与 #13(Branch Protection)仍独立开放。WIP 锁、语言重写、Encrypt Key 等延期项只在出现现实证据后重开。
+- **开放事项**:见 [docs/STATUS.md](STATUS.md)。当前工程路由为 V3-a Issue #37;官方元数据 API 消除了手工文档域名配置,`/note` 仍需确认内部 ID、tag 与笔记文件夹 token。66 天/≥30 次最早于 2026-10-06 完成观察,继续长期记录但不阻塞。Issue #12(生产幂等)与 #13(Branch Protection)仍独立开放。WIP 锁、语言重写、Encrypt Key 等延期项只在出现现实证据后重开。
 - **历史字段迁移**:`docs/migrations/`(GitHub Projects 字段六状态化已于 2026-07-24 完成;一次性脚本已删除,禁止重演)。
 - **审计过程稿**:`docs/audits/` 为本地未入库工作区,不是事实依据。
