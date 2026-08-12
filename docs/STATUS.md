@@ -11,7 +11,7 @@
 | V2-a 交互状态机 | merged / CI green | deployed and verified | collecting |
 | Reliability Continuation | complete on `main@89b3da6` | 幂等后端尚未启用 | not applicable |
 | V2-b | complete / CI green (`main@4b8c6df`) | Actions active / E2E verified on `main@c75c84d` | hard acceptance complete; longitudinal metric collecting |
-| V3-a | Goal active / Issue #29 ready | not deployed | not started |
+| V3-a | Goal active / Issue #29 ready (`main@070911a`) | not deployed | not started |
 
 三轴含义:
 
@@ -44,7 +44,7 @@
 13. 当前 Goal 与任务边界见 [GOAL.md](../GOAL.md)。V2-b PR #24 已 squash merge 为 `main@4b8c6df`;17 个 Worker 测试文件 / 293 项与 17 项 Python unittest 通过、生产依赖 audit 0、typecheck/build/Python 3.11 py_compile、独立审查与 PR CI 全绿。该合并未触发生产 FC 部署,生产 Worker 仍运行 `eb20515c`;Actions 侧已于 2026-08-12 从 `main@c75c84d` 完成真实 E2E。
 14. Issue #19 / PR #20 已完成 Python daily-push 独立正确性切片:`scripts/fetch_data.py` 使用 `after` + `pageInfo.hasNextPage/endCursor` 遍历 ProjectV2 items,PR 于 2026-08-12 squash merge 为 `89b3da6`;Issue #19 已关闭。
 15. 用户于 2026-08-12 明确授权真实 V2-b 验收。`daily-push.yml` run [`31554628778`](https://github.com/JettxonHo/yeshu/actions/runs/31554628778) 与 `wednesday-check.yml` run [`31554630892`](https://github.com/JettxonHo/yeshu/actions/runs/31554630892) 均从 `main@c75c84d` 手动触发并成功;飞书真实收到“今日 P0 + Stuck”与“周三体检”卡片,脱敏截图见 [`v2b-daily-p0-stuck.png`](screenshots/v2b-daily-p0-stuck.png) 和 [`v2b-wednesday-check.png`](screenshots/v2b-wednesday-check.png)。当时数据为 P0 0、无 Stuck、Doing 0、Done 4、Abandoned 8,因此本次线上 E2E 证明了工作流、推送、卡片 schema 与空态路径,不冒充非空 P0/Stuck/Doing 提醒的生产数据验证;这些分支仍由固定时间单测与 mutation-sensitive 契约覆盖。
-16. **V3-a 已启动**:Product-Spec §14.1 已按用户明确决策修订,Phase 4 标记完成;Issue #27 的 E2E/截图职责完成。该调整改变阶段准入,不改变“66 天/≥30 次尚无真实证据”的事实。
+16. **V3-a 已启动**:Product-Spec §14.1 与 V3-a Goal 已由 PR #30 合并为 `main@070911a`;Phase 4 标记完成,Issue #27 与 Milestone #2 已关闭。该调整改变阶段准入,不改变“66 天/≥30 次尚无真实证据”的事实。
 17. V3 生产实现使用现有飞书应用的 tenant token 调用 Docs/Drive OpenAPI,不依赖 FC 中不存在的本地 `lark-cli` 登录态。首个切片 Issue #29 只建立 create document / raw content 模块契约;文件夹权限、命令路由和生产 E2E 分开推进。
 
 ## 剩余可靠性工作(Reliability Hardening 清单)
