@@ -2,7 +2,7 @@
 
 > 建立:2026-08-12
 >
-> 状态:ACTIVE / NOTE_DESIGN_APPROVAL_REQUIRED
+> 状态:ACTIVE / METADATA_TASK_CONTRACT_READY
 >
 > 产品边界:[Product-Spec.md](Product-Spec.md) §8、§14.1
 >
@@ -23,7 +23,7 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 - Engineering:V3-a Docs 创建/读取与正文写入已由 PR #32/#35 合并至 `main@d0d09e6`;305 项 Worker 测试与 PR CI 全绿。
 - Production:Worker 仍运行 `main@eb20515c` 的 V2-a;V2-b Actions active。
 - Validation:66 天/≥30 次仍 unverified;作为长期指标并行观察。
-- Contract:Issue #33 已关闭;下一步为 `/note` 垂直切片,产品细节确认后再建立 Task Contract。
+- Contract:[Issue #37 · Feishu document metadata reader](https://github.com/JettxonHo/yeshu/issues/37) 已建立;`/note` 产品细节仍待确认。
 
 ## 3. Goal
 
@@ -49,7 +49,7 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 1. 内容真相源始终是飞书云文档;Worker 只持有 document ID、关联和进度元数据。
 2. 生产 Worker 复用现有 tenant token 访问 Docs/Drive OpenAPI;不调用 shell,不依赖本地登录态。
 3. 外部响应只在边界校验实际消费字段;沿用现有超时、错误脱敏和 mutation 不重试规则。
-4. V3-a 按小切片推进:Docs 创建/读取 → 正文写入 → `/note` → `/draft`/映射 → `/drafts`/监控 → 真实 E2E。飞书创建文档接口只支持标题,正文必须单独创建文本块。
+4. V3-a 按小切片推进:Docs 创建/读取 → 正文写入 → 元数据读取 → `/note` → `/draft`/映射 → `/drafts`/监控 → 真实 E2E。飞书创建文档接口只支持标题,正文必须单独创建文本块。
 5. 飞书应用权限、文件夹准备和生产部署是人工前置,不得由 mock/CI 冒充。
 
 ## 6. Milestones
@@ -61,9 +61,11 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 - M4 `/drafts`:进度视图与 3 天/7 天提醒;
 - M5 产品验收:真实飞书完成首篇 Show 发布并保存截图。
 
-## 7. 下一决策点
+## 7. 当前 Task Contract
 
-- `/note` 需要先确认内部 ID、tag、笔记文件夹 token 与文档域名的最小方案;涉及 Product-Spec §8.2.2 的决策先改 spec,再建 Issue。
+- Issue #37 只允许修改 `worker/src/lib/lark.ts` 与 `worker/src/lib/external-clients.test.ts`,增加批量 Docs 元数据读取,返回正确 URL 与 `latest_modify_time`。
+- 该切片消除手工拼接租户域名,并为 `/drafts` 提供文档修改时间;不改变 `/note` 内部 ID/tag 产品决策。
+- `/note` 仍需确认内部 ID、tag 与笔记文件夹 token 的最小方案;涉及 Product-Spec §8.2.2 的决策先改 spec,再建命令 Issue。
 - 保持不新增依赖、不运行 lark-cli、不触生产 API、不读取凭据。
 - `docs/audits/` 是用户材料,不读取、不修改、不暂存。
 
