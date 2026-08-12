@@ -1,8 +1,8 @@
 # 野薯(Yeshu)· Development Plan
 
-> **版本**:1.9(2026-08-12 修订)
-> **本次修订**:用户已明确授权启动 V2-b 工程;行为成功标准、真实端到端与截图仍保留为完成门槛
-> **状态**:Phase 4(V2-b)⏳ 工程开发中 / Validation collecting
+> **版本**:2.0(2026-08-12 修订)
+> **本次修订**:V2-b 工程已由 PR #24 合并;真实 Actions/飞书端到端、行为成功标准与截图仍保留为完成门槛
+> **状态**:Phase 4(V2-b)⏳ Engineering complete / Human validation pending
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -43,13 +43,13 @@
 ```
 📊 项目进度检测
 - Product Spec:✅(产品决策单一真相源)
-- DEV-PLAN   :✅(本文件 v1.9)
-- 项目代码   :✅(V1-a / V1-b / V2-a merged;V2-b 开发中)
-当前环节:Phase 4 · V2-b 工程开发
-  - Engineering :Worker/Python ProjectV2 cursor 分页均已 merged(代码基线 main@89b3da6,293 项 Worker + 4 项 Python 测试)
+- DEV-PLAN   :✅(本文件 v2.0)
+- 项目代码   :✅(V1-a / V1-b / V2-a / V2-b Engineering merged)
+当前环节:Phase 4 · V2-b 人工验证
+  - Engineering :PR #24 已 merge 为 main@4b8c6df(293 项 Worker + 17 项 Python 测试,CI 双绿)
   - Production  :线上 FC 运行从 main@eb20515c 构建并验证的 V2-a;幂等后端尚未启用
   - Validation  :行为数据 collecting(V2 门槛:66 天按钮完成 ≥ 30,spec §14.1)
-下一步:完成 Issue #23 的 Stuck/P0 与周三体检工程 → 独立审查与 CI → 人工真实推送/截图/行为验证
+下一步:从 main 人工运行 daily/wednesday Actions 并核对飞书卡片 → 保存截图 → 继续收集 66 天按钮完成 ≥30 的行为证据
 ```
 
 ---
@@ -202,10 +202,11 @@
 
 - **目标**:实现 spec §5 业务规则全量——Stuck 机制(§5.2)、P0 完整机制(§5.3)、延期 P0(§5.4)、周三 20:00 体检推送。**完成 V2**
 - **完成标准**:
-  - [ ] `scripts/analyze.py`:Stuck Score(卡住天数 × Priority 权重,§5.2)+ 每日推最高分 1 张 + >100 分紧急推送
-  - [ ] P0 选择算法(§5.3:延期 P0 优先)
-  - [ ] `.github/workflows/wednesday-check.yml`:cron `0 12 * * 3`(UTC)= 周三北京 20:00
-  - [ ] 体检推送(进度 + Doing 3 天没动提醒)
+  - [x] `scripts/analyze.py`:Stuck Score(卡住天数 × Priority 权重,§5.2)+ 每日推最高分 1 张 + >100 分紧急推送
+  - [x] P0 选择算法(§5.3:延期 P0 优先)
+  - [x] `.github/workflows/wednesday-check.yml`:cron `0 12 * * 3`(UTC)= 周三北京 20:00
+  - [x] 体检卡片工程实现(进度 + Doing 3 天没动提醒)
+  - [ ] 从 main 真实触发 daily/wednesday workflow,确认飞书收到正确卡片并保存截图
   - [ ] 四步走验证
   - [ ] **V2 成功标准(spec §14.1):66 天按钮完成 ≥ 30 次**(与 Phase 3 合并,跨期累积)
 - **涉及文件**:`scripts/analyze.py`、`.github/workflows/wednesday-check.yml`、`scripts/build_card.py`(体检卡)
@@ -217,7 +218,7 @@
 - **依赖**:Phase 3
 - **测试**:`act` 跑 wednesday-check;构造 Stuck 测试数据
 - **工作量**:3–5 天
-- **状态**:⏳ 用户于 2026-08-12 明确授权启动工程;Task Contract 见 Issue #23。工程启动不代表 66 天行为门槛、真实 E2E 或截图已完成。
+- **状态**:⏳ Engineering complete / Human validation pending。Issue #23 已关闭,PR #24 已合并为 `main@4b8c6df`;真实 Actions/飞书 E2E、截图与 66 天行为门槛未完成,因此 Phase 不标 ✅。
 
 ---
 
@@ -320,12 +321,12 @@
 
 ## 6. 下一步
 
-当前路由:**Phase 4 · V2-b 工程开发**。后续按序执行,不跳步:
+当前路由:**Phase 4 · V2-b 人工验证**。后续按序执行,不跳步:
 
-1. **可靠性前置已完成**:PR #14/#15/#16/#18/#20 均已合并且 CI 双绿;当前按 Issue #23 开发 V2-b;
+1. **V2-b 工程已完成**:Issue #23 / PR #24 已合并,Python 17 项与 Worker 293 项测试、独立审查、CI 双绿;
 2. **幂等生产启用单独推进**:等待用户决定,之后人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
 3. **Branch Protection 单独决策**:GitHub 当前未强制 required checks,未经用户确认不修改仓库设置;
 4. **克制处理其余旧债务**:WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
-5. **完成 V2-b 后才进入 V3**:本轮用户已授权启动 Phase 4,但只有工程、真实 E2E、截图和行为门槛(66 天按钮完成 ≥ 30,spec §14.1)全部闭环后,才允许进入 Phase 5(V3-a);不得跳到应用主页、段位成就或 AI 教练。
+5. **完成 V2-b 后才进入 V3**:当前只剩真实 daily/wednesday Actions→飞书验证、截图和行为门槛(66 天按钮完成 ≥ 30,spec §14.1);全部闭环后才允许进入 Phase 5(V3-a)。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*

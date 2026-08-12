@@ -10,7 +10,7 @@
 | V1-b Worker | merged | deployed | collecting |
 | V2-a 交互状态机 | merged / CI green | deployed and verified | collecting |
 | Reliability Continuation | complete on `main@89b3da6` | 幂等后端尚未启用 | not applicable |
-| V2-b | in progress (Issue #23) | not deployed | collecting / not complete |
+| V2-b | merged / CI green (`main@4b8c6df`) | not deployed / E2E pending | collecting / not complete |
 
 三轴含义:
 
@@ -40,9 +40,9 @@
 10. 2026-08-06 接手审计发现 Hono `<4.12.34` 新披露的 moderate CORS ReDoS 漏洞;PR #14 已把最低版本提升至官方修复下限并解析到 `4.13.0`,2026-08-08 以 squash commit `65d1a4c` 合并 main,`npm audit` 为 0,CI worker/python 双绿。
 11. **Phase DoD 证据缺口**:`docs/screenshots/` 当前只有 `.gitkeep`,没有 V0/V1/V2 关键交互截图。V2-a 可以确认“工程合并 + 生产功能验证完成”,但不能声称 AGENTS.md 定义的完整 Phase DoD 已闭环;截图与行为门槛都待用户侧真实证据补齐。
 12. 2026-08-08 GitHub API 核验:`main` 尚未启用 Branch Protection。CI workflow 与历史 worker/python 绿灯真实存在,但“required checks”目前是项目流程要求,不是平台强制规则;是否启用保护需用户确认。
-13. 当前接管 Goal 与任务边界见 [GOAL.md](../GOAL.md)。PR #14/#15/#16/#18/#20 已合并;Python 分页代码合并基线为 `main@89b3da6`,17 个 Worker 测试文件 / 293 项与 4 项 Python unittest 通过、生产依赖 audit 0、typecheck/build/Python 3.11 py_compile 与远程 CI 全绿。后续纯文档提交不改变该代码基线;这些合并也未触发生产部署,生产仍运行 `eb20515c`。
+13. 当前 Goal 与任务边界见 [GOAL.md](../GOAL.md)。V2-b PR #24 已 squash merge 为 `main@4b8c6df`;17 个 Worker 测试文件 / 293 项与 17 项 Python unittest 通过、生产依赖 audit 0、typecheck/build/Python 3.11 py_compile、独立审查与 PR CI 全绿。该合并未触发生产 FC 部署,也未人工触发 V2-b Actions/飞书 E2E;生产仍运行 `eb20515c`。
 14. Issue #19 / PR #20 已完成 Python daily-push 独立正确性切片:`scripts/fetch_data.py` 使用 `after` + `pageInfo.hasNextPage/endCursor` 遍历 ProjectV2 items,PR 于 2026-08-12 squash merge 为 `89b3da6`;Issue #19 已关闭。
-15. 用户于 2026-08-12 明确授权启动 V2-b 工程,当前 Task Contract 为 Issue #23。该授权只把 Engineering 轴改为 in progress;生产仍未部署,66 天按钮完成 ≥30 次、真实飞书端到端和截图均未据此自动成立。
+15. 用户于 2026-08-12 明确授权启动 V2-b 工程;Issue #23 / PR #24 已完成数据规范化、延期 P0、Stuck Score、每日卡片与周三体检工程。当前只可声明 Engineering complete;生产部署、真实 daily/wednesday Actions→飞书验证、截图和 66 天按钮完成 ≥30 次均仍待人工证据。
 
 ## 剩余可靠性工作(Reliability Hardening 清单)
 

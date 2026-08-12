@@ -2,9 +2,9 @@
 
 > 建立:2026-08-12
 >
-> 状态:IN_PROGRESS / VALIDATION_PENDING
+> 状态:COMPLETE_ENGINEERING / HUMAN_VALIDATION_PENDING
 >
-> Goal 模式:用户已明确授权启动 V2-b 工程；真实行为门槛、端到端验证和截图仍按事实单独验收
+> Goal 模式:V2-b 工程已合并；真实 Actions/飞书端到端、行为门槛和截图仍按事实单独验收
 >
 > 产品边界:[Product-Spec.md](Product-Spec.md)
 >
@@ -18,7 +18,7 @@
 
 ## 2. 当前状态
 
-- Engineering:V2-b 开发中，Task Contract 为 [Issue #23](https://github.com/JettxonHo/yeshu/issues/23)。
+- Engineering:Issue #23 已关闭，PR #24 已 squash merge 为 `main@4b8c6df`，worker/python CI 双绿。
 - Production:仍运行 `eb20515c` 的 V2-a；本 Goal 不部署生产。
 - Validation:V2 行为数据继续 collecting；截图 DoD 未闭环。
 
@@ -50,15 +50,15 @@
 
 ## 6. Milestones
 
-- M1 数据与分析:完整规范化 item；P0/Stuck/周三分析通过固定时间测试；
-- M2 卡片与 workflow:每日和周三卡片、两个 Actions workflow 契约完成；
-- M3 工程门禁:Python 3.11+ unittest/py_compile、Worker `npm run check`、diff-check 全绿；
-- M4 审查与合并:独立审查 `APPROVED`，PR worker/python CI 双绿并合并；
+- M1 数据与分析:✅ 完整规范化 item；P0/Stuck/周三分析通过固定时间测试；
+- M2 卡片与 workflow:✅ 每日和周三卡片、两个 Actions workflow 契约完成；
+- M3 工程门禁:✅ Python 3.11 17 项 unittest/py_compile、Worker 293 项 `npm run check`、diff-check 全绿；
+- M4 审查与合并:✅ 独立审查 `APPROVED`，PR #24 worker/python CI 双绿并合并为 `main@4b8c6df`；
 - M5 人工验证:由用户在真实飞书/Actions 环境完成推送、截图和行为计数后，才可将 V2-b 标记完成。
 
 ## 7. Task Contract
 
-- 当前实现任务:[Issue #23 · V2-b Stuck/P0 与周三体检](https://github.com/JettxonHo/yeshu/issues/23)。
+- 已完成实现任务:[Issue #23 · V2-b Stuck/P0 与周三体检](https://github.com/JettxonHo/yeshu/issues/23)，由 PR #24 合并。
 - 实现 Agent 只修改 Issue allowlist；主控拥有 Goal/计划/状态/测试文档。
 - `docs/audits/` 是用户材料，不读取、不修改、不暂存。
 - 生产幂等与 Branch Protection 继续由 Issues #12/#13 独立追踪，不混入本 Goal。

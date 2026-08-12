@@ -2,7 +2,7 @@
 
 > **版本**:1.0
 > **日期**:2026-07-20
-> **状态**:产品决策稳定;V2-a 工程/生产验证完成,行为验证 collecting;当前处于 Reliability Hardening
+> **状态**:产品决策稳定;V2-b 工程已合并,生产仍为 V2-a;真实 E2E、截图与行为验证 collecting
 > **维护**:本文档是项目单一真相源,后续 dev-planner / dev-builder 以此为基础
 
 ---
@@ -542,7 +542,7 @@ yeshu/
 ├── .github/workflows/
 │   ├── ci.yml
 │   ├── daily-push.yml
-│   ├── wednesday-check.yml      # planned
+│   ├── wednesday-check.yml      # V2-b 已实现
 │   └── weekly-review.yml        # planned
 ├── worker/
 │   ├── src/
@@ -554,7 +554,7 @@ yeshu/
 │   └── s.yaml                  # FC 3.0 部署配置
 ├── scripts/
 │   ├── fetch_data.py
-│   ├── analyze.py              # planned
+│   ├── analyze.py              # V2-b P0/Stuck/周三体检分析
 │   ├── build_card.py
 │   └── push_lark.py
 ├── docs/                       # 状态、Goal 配套文档、运行手册

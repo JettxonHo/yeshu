@@ -105,7 +105,7 @@ yeshu/
 ├── .github/workflows/
 │   ├── ci.yml             # PR 门禁:worker(audit+typecheck+test+build)+ python(unittest+py_compile)— 已存在
 │   ├── daily-push.yml     # 每日 08:00 推送 — 已存在
-│   ├── wednesday-check.yml# 周三 20:00 体检(Phase 4,planned:尚未创建)
+│   ├── wednesday-check.yml# 周三 20:00 体检(Phase 4,V2-b 工程已合并)
 │   └── weekly-review.yml  # 周日 20:00 review(Phase 6,planned:尚未创建)
 ├── worker/                # 阿里云 FC 函数(TypeScript + Hono)
 │   ├── s.yaml             # FC 3.0 部署配置(Serverless Devs)
@@ -134,7 +134,7 @@ yeshu/
 │   ├── fetch_data.py      # 拉数据
 │   ├── build_card.py      # 组装卡片 JSON
 │   ├── push_lark.py       # 推飞书
-│   └── analyze.py         # 聚合分析(Phase 4,planned:尚未创建)
+│   └── analyze.py         # P0/Stuck/周三体检聚合分析(Phase 4,V2-b 工程已合并)
 ├── cards/                 # 卡片模板 JSON
 ├── docs/
 │   ├── STATUS.md          # 项目当前状态唯一事实页(三轴状态 + 剩余可靠性清单)
