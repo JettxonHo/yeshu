@@ -21,6 +21,22 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function projectMetaResponse(
+  fields: unknown[],
+  projectId = "project-1",
+): Response {
+  return jsonResponse({
+    data: {
+      user: {
+        projectV2: {
+          id: projectId,
+          fields: { nodes: fields },
+        },
+      },
+    },
+  });
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -28,6 +44,167 @@ afterEach(() => {
 });
 
 describe("GitHub GraphQL 请求策略", () => {
+  it("ProjectMeta 同时映射字段类型与 single-select 选项", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      projectMetaResponse([
+        {
+          id: "status-field",
+          name: "Status",
+          dataType: "SINGLE_SELECT",
+          options: [
+            { id: "backlog-option", name: "Backlog" },
+            { id: "doing-option", name: "Doing" },
+          ],
+        },
+        {
+          id: "related-doc-field",
+          name: "Related Doc",
+          dataType: "TEXT",
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { fetchProjectMeta } = await import("./github");
+
+    await expect(fetchProjectMeta(ENV)).resolves.toEqual({
+      projectId: "project-1",
+      fields: {
+        Status: {
+          fieldId: "status-field",
+          dataType: "SINGLE_SELECT",
+          options: { Backlog: "backlog-option", Doing: "doing-option" },
+        },
+        "Related Doc": {
+          fieldId: "related-doc-field",
+          dataType: "TEXT",
+          options: {},
+        },
+      },
+    });
+
+    const request = JSON.parse(
+      String((fetchMock.mock.calls[0][1] as RequestInit).body),
+    ) as { query: string };
+    expect(request.query).toMatch(
+      /\.\.\.on ProjectV2Field\s*\{\s*id\s+name\s+dataType\s*\}/,
+    );
+    expect(request.query).toMatch(
+      /\.\.\.on ProjectV2SingleSelectField\s*\{[\s\S]*?id\s+name\s+dataType[\s\S]*?options\s*\{\s*id\s+name\s*\}/,
+    );
+  });
+
+  it("文本字段 mutation 参数化 text value 且不拼接文档 ID", async () => {
+    const value = 'doxcn-doc-"quoted"';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        projectMetaResponse([
+          {
+            id: "related-doc-field",
+            name: "Related Doc",
+            dataType: "TEXT",
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: { updateProjectV2ItemFieldValue: { projectV2Item: { id: "item-1" } } } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateItemTextField } = await import("./github");
+
+    await expect(
+      updateItemTextField(ENV, "item-1", "Related Doc", value),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const request = JSON.parse(
+      String((fetchMock.mock.calls[1][1] as RequestInit).body),
+    ) as { query: string; variables: Record<string, unknown> };
+    expect(request.variables).toEqual({
+      projectId: "project-1",
+      itemId: "item-1",
+      fieldId: "related-doc-field",
+      value,
+    });
+    expect(request.query).toContain("value: { text: $value }");
+    expect(request.query).not.toContain(value);
+  });
+
+  it.each([
+    ["missing", [], "未知字段:Related Doc"],
+    [
+      "non-text",
+      [{ id: "status-field", name: "Related Doc", dataType: "SINGLE_SELECT", options: [] }],
+      "字段不是文本:Related Doc",
+    ],
+  ])("文本字段 %s 时在 mutation 前失败", async (_case, fields, message) => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(projectMetaResponse(fields));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateItemTextField } = await import("./github");
+
+    await expect(
+      updateItemTextField(ENV, "item-1", "Related Doc", "doxcn-test"),
+    ).rejects.toThrow(message);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("文本 mutation 遇到 503 只调用一次且错误不含响应体", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        projectMetaResponse([
+          {
+            id: "related-doc-field",
+            name: "Related Doc",
+            dataType: "TEXT",
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(new Response("private text mutation detail", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateItemTextField } = await import("./github");
+
+    const promise = updateItemTextField(
+      ENV,
+      "item-1",
+      "Related Doc",
+      "doxcn-test",
+    );
+    await expect(promise).rejects.toMatchObject({ kind: "http", status: 503 });
+    await expect(promise).rejects.not.toThrow(/private text mutation detail/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("文本 mutation 的 GraphQL errors 脱敏", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        projectMetaResponse([
+          {
+            id: "related-doc-field",
+            name: "Related Doc",
+            dataType: "TEXT",
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: null,
+          errors: [{ message: "private project node", path: ["mutation"] }],
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { updateItemTextField } = await import("./github");
+
+    const promise = updateItemTextField(
+      ENV,
+      "item-1",
+      "Related Doc",
+      "doxcn-test",
+    );
+    await expect(promise).rejects.toMatchObject({ kind: "remote-error" });
+    await expect(promise).rejects.not.toThrow(/private project node/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("query 遇到 503 时重试一次并成功", async () => {
     const fetchMock = vi
       .fn()
