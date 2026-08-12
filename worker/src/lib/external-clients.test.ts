@@ -387,3 +387,115 @@ describe("飞书 Docs OpenAPI", () => {
     await expect(promise).rejects.not.toThrow(/private raw detail/);
   });
 });
+
+describe("飞书 Docs 文本写入", () => {
+  it("在根 Page Block 末尾追加 Text Block 并正确编码文档 ID", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ code: 0 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { appendDocumentText } = await import("./lark");
+
+    await expect(
+      appendDocumentText(ENV, "doxcn/root block", "正文第一行\n正文第二行"),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "https://open.feishu.cn/open-apis/docx/v1/documents/doxcn%2Froot%20block/blocks/doxcn%2Froot%20block/children",
+    );
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+      method: "POST",
+      headers: {
+        Authorization: "Bearer tenant-token",
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    });
+    expect(
+      JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body)),
+    ).toEqual({
+      index: -1,
+      children: [
+        {
+          block_type: 2,
+          text: {
+            elements: [
+              {
+                text_run: { content: "正文第一行\n正文第二行" },
+              },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
+  it("追加正文 mutation 遇到 HTTP 503 不自动重试", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response("private block response", { status: 503 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { appendDocumentText } = await import("./lark");
+
+    const promise = appendDocumentText(ENV, "doxcn-test", "正文");
+    await expect(promise).rejects.toMatchObject({ kind: "http", status: 503 });
+    await expect(promise).rejects.not.toThrow(/private block response/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("追加正文非零业务码返回脱敏错误", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token-1",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ code: 1770001, msg: "private block detail" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token-2",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ code: 0 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { appendDocumentText } = await import("./lark");
+
+    const first = appendDocumentText(ENV, "doxcn-test", "正文");
+    await expect(first).rejects.toMatchObject({ kind: "remote-error" });
+    await expect(first).rejects.not.toThrow(/private block detail/);
+    await expect(
+      appendDocumentText(ENV, "doxcn-test", "第二段正文"),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token-1",
+    });
+    expect(fetchMock.mock.calls[3][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token-2",
+    });
+  });
+});

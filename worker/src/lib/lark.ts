@@ -155,6 +155,52 @@ export async function getDocumentRawContent(
   }
 }
 
+/** 在文档根 Page Block 末尾追加一个纯文本块。 */
+export async function appendDocumentText(
+  env: Env,
+  documentId: string,
+  content: string,
+): Promise<void> {
+  const token = await getTenantToken(env);
+  const encodedDocumentId = encodeURIComponent(documentId);
+  try {
+    const data = await fetchJsonWithPolicy<{ code?: unknown }>(
+      `${FEISHU_BASE}/open-apis/docx/v1/documents/${encodedDocumentId}/blocks/${encodedDocumentId}/children`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          index: -1,
+          children: [
+            {
+              block_type: 2,
+              text: {
+                elements: [{ text_run: { content } }],
+              },
+            },
+          ],
+        }),
+      },
+      {
+        service: "feishu",
+        // 创建文本块是 mutation:超时后重试可能重复写入,因此只尝试一次。
+        retry: "none",
+      },
+    );
+    if (data.code !== 0) {
+      cachedToken = null;
+      throw feishuRemoteError();
+    }
+  } catch (error) {
+    if (error instanceof ExternalHttpError && error.status === 401)
+      cachedToken = null;
+    throw error;
+  }
+}
+
 /** 发 interactive 卡片到 open_id,返回 message_id */
 export async function sendCard(
   env: Env,
