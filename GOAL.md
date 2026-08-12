@@ -54,7 +54,7 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 
 ## 6. Milestones
 
-- M0 产品与合同:⏳ Product-Spec 门槛修订、V3-a Goal、Milestone #3 与 Issue #29 合并 main;
+- M0 产品与合同:✅ Product-Spec 门槛修订与 V3-a Goal 由 PR #30 合并为 `main@070911a`;Milestone #3 与 Issue #29 已建立;
 - M1 Docs API 基础:Issue #29 实现 create document / raw content,独立审查与 CI 全绿;
 - M2 `/note`:创建笔记文档并返回可打开卡片;
 - M3 `/draft`:创建草稿、目标字数、Show↔文档映射;
