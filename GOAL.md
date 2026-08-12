@@ -1,80 +1,78 @@
-# 野薯当前 Goal · V2-b 双向闭环完成
+# 野薯当前 Goal · V3-a 内容闭环基础
 
 > 建立:2026-08-12
 >
-> 状态:COMPLETE_ENGINEERING / ACTIONS_E2E_COMPLETE / BEHAVIOR_GATE_PENDING
+> 状态:ACTIVE / FIRST_TASK_CONTRACT_READY
 >
-> Goal 模式:V2-b 工程与真实 Actions/飞书端到端已完成；行为门槛仍按事实单独验收
->
-> 产品边界:[Product-Spec.md](Product-Spec.md)
+> 产品边界:[Product-Spec.md](Product-Spec.md) §8、§14.1
 >
 > 当前事实:[docs/STATUS.md](docs/STATUS.md)
 
-## 1. 执行摘要
+## 1. 进入决策
 
-在现有 V2-a 按钮与状态机之上，完成 Actions 侧的 P0/Stuck 分析和周三体检推送，使野薯具备 Product-Spec §5.2–5.4、§7.1–7.3 与 §11.4/11.6 定义的 V2-b 工程能力。
+用户于 2026-08-12 明确确认提前进入 V3,并批准修改 Product-Spec 的行为门槛:
 
-用户于 2026-08-12 明确确认进入 V2-b。该确认授权工程启动，不等于 V2 成功标准已经达标；“66 天按钮完成 ≥30 次”、真实飞书端到端验证和关键截图仍是 V2-b 完成条件。
+- V2 硬验收 = 工程合并 + 从 main 完成真实 Actions→飞书 E2E + 脱敏截图;
+- “66 天按钮完成 ≥30 次”保留为长期行为指标,继续 collecting,不再阻塞 V3;
+- V3 成功标准仍为“首篇 Show 发布”,不降低。
+
+V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 
 ## 2. 当前状态
 
-- Engineering:Issue #23 已关闭，PR #24 已 squash merge 为 `main@4b8c6df`，worker/python CI 双绿。
-- Production:仍运行 `eb20515c` 的 V2-a；本 Goal 不部署生产。
-- Validation:2026-08-12 已完成 daily / Wednesday 真实飞书空态路径并保存两张脱敏截图；66 天按钮完成 ≥30 次仍 collecting / unverified。
+- Engineering:V2-b PR #24 与证据 PR #28 已合并;V3-a 尚无代码。
+- Production:Worker 仍运行 `main@eb20515c` 的 V2-a;V2-b Actions active。
+- Validation:66 天/≥30 次仍 unverified;作为长期指标并行观察。
+- Contract:[Issue #29 · Feishu Docs OpenAPI foundation](https://github.com/JettxonHo/yeshu/issues/29) 已建立。
 
 ## 3. Goal
 
-1. 扩展 Python ProjectV2 数据契约，提供 P0/Stuck 所需的 Status、Priority 与更新时间；
-2. 实现每日 P0 选择、延期识别、Stuck Score、最高分提醒与紧急标记；
-3. 把每日推送接入 `fetch → analyze → build → push` 流水线；
-4. 新增周三 20:00 体检，展示状态进度与 Doing 三天未更新提醒；
-5. 以固定时间单元测试、Python/Worker 门禁、独立审查与 PR CI 证明工程正确性；
-6. 准确记录工程、生产、行为验证和截图四者的边界。
+完成 Product-Spec §8 的内容闭环基础:
+
+1. 用 FC 可运行的飞书 Docs/Drive OpenAPI 适配器替代生产路径中的本地 `lark-cli` 假设;
+2. 实现 `/note` 创建笔记云文档;
+3. 实现 `/draft` 创建草稿、可选目标字数和 Show↔文档映射;
+4. 实现 `/drafts` 进度卡与 3 天/7 天未修改提醒;
+5. 通过真实飞书 E2E 完成首篇 Show 发布,达到 V3 成功标准。
 
 ## 4. 非 Goal
 
-- 生产 FC 部署、读取凭据或修改生产数据；
-- GitHub Project 字段迁移或 mutation；
-- V3-b 的交互式周日 Review；
-- V3 写作系统、V4 应用主页、V5 AI 教练；
-- WIP 原子锁、Python→TypeScript 重写、Encrypt Key、哈希/SHA-256 或低概率防御扩张；
-- 把 mock/CI 结果写成真实端到端或行为门槛达标。
+- V3-b 周日 Review、`/ideas`、`/promote` 与 Tag 系统;
+- V4 应用主页、段位成就和动效;
+- V5 AI 教练;
+- Tablestore 生产启用、Branch Protection 或旧可靠性债务;
+- 在单个提交中同时实现文档 API、全部命令、目录迁移与生产权限;
+- 哈希/SHA-256、无现实触发路径的防御分支或机械化 rubric。
 
-## 5. 关键工程决策
+## 5. 关键决策
 
-1. Stuck 的 Last Updated 使用 GitHub `ProjectV2Item.updatedAt`；
-2. 延期 P0 使用 Priority 字段值自身的 `updatedAt` 与 Asia/Shanghai 本周一 00:00 比较，不新增字段；
-3. 空 Priority 的 Stuck 权重按最低档 0.5，保持可见但不提高优先级；
-4. P0 超限只输出明确的 `review_required` 提醒，不在本切片引入交互 mutation；交互式 Review 保留在 V3-b；
-5. 只使用 Python 标准库与既有 `requests`，不新增依赖。
+1. 内容真相源始终是飞书云文档;Worker 只持有 document ID、关联和进度元数据。
+2. 生产 Worker 复用现有 tenant token 访问 Docs/Drive OpenAPI;不调用 shell,不依赖本地登录态。
+3. 外部响应只在边界校验实际消费字段;沿用现有超时、错误脱敏和 mutation 不重试规则。
+4. V3-a 按小切片推进:Docs 适配器 → `/note` → `/draft`/映射 → `/drafts`/监控 → 真实 E2E。
+5. 飞书应用权限、文件夹准备和生产部署是人工前置,不得由 mock/CI 冒充。
 
 ## 6. Milestones
 
-- M1 数据与分析:✅ 完整规范化 item；P0/Stuck/周三分析通过固定时间测试；
-- M2 卡片与 workflow:✅ 每日和周三卡片、两个 Actions workflow 契约完成；
-- M3 工程门禁:✅ Python 3.11 17 项 unittest/py_compile、Worker 293 项 `npm run check`、diff-check 全绿；
-- M4 审查与合并:✅ 独立审查 `APPROVED`，PR #24 worker/python CI 双绿并合并为 `main@4b8c6df`；
-- M5 人工验证:⏳ 真实飞书/Actions 推送与截图已完成；行为计数未完成。V2-a 自 2026-08-01 上线,66 天窗口最早于 2026-10-06 结束,且当前没有持久化按钮完成计数证据。
+- M0 产品与合同:⏳ Product-Spec 门槛修订、V3-a Goal、Milestone #3 与 Issue #29 合并 main;
+- M1 Docs API 基础:Issue #29 实现 create document / raw content,独立审查与 CI 全绿;
+- M2 `/note`:创建笔记文档并返回可打开卡片;
+- M3 `/draft`:创建草稿、目标字数、Show↔文档映射;
+- M4 `/drafts`:进度视图与 3 天/7 天提醒;
+- M5 产品验收:真实飞书完成首篇 Show 发布并保存截图。
 
-## 7. Task Contract
+## 7. 当前 Task Contract
 
-- 已完成实现任务:[Issue #23 · V2-b Stuck/P0 与周三体检](https://github.com/JettxonHo/yeshu/issues/23)，由 PR #24 合并。
-- 实现 Agent 只修改 Issue allowlist；主控拥有 Goal/计划/状态/测试文档。
-- `docs/audits/` 是用户材料，不读取、不修改、不暂存。
-- 生产幂等与 Branch Protection 继续由 Issues #12/#13 独立追踪，不混入本 Goal。
+- [Issue #29](https://github.com/JettxonHo/yeshu/issues/29) 只允许修改 `worker/src/lib/lark.ts`、`worker/src/lib/external-clients.test.ts`,必要时由主控先修订决策日志。
+- 接口:`createDocument(env, input)` 与 `getDocumentRawContent(env, documentId)`。
+- 不新增依赖、不运行 lark-cli、不触生产 API、不读取凭据。
+- 验收:`npm run check`、mutation-sensitive 合同测试、独立审查、PR CI。
+- `docs/audits/` 是用户材料,不读取、不修改、不暂存。
 
-## 8. 完成标准
+## 8. V3-a 完成标准
 
-工程完成必须满足:
-
-- Issue #23 的行为与测试验收全部通过；
-- 独立代码审查结论为 `APPROVED`；
-- PR worker/python CI 双绿并合并 main；
-- `GOAL.md`、`DEV-PLAN.md`、`docs/STATUS.md` 一致；
-- 未部署时明确写“未部署”，缺真实推送/截图/行为计数时明确写“待人工验证”。
-
-V2-b 完整完成还必须满足:
-
-- 从 main 进行真实 Actions/飞书端到端验证；
-- 关键交互截图进入 `docs/screenshots/`；
-- V2 行为成功标准“66 天按钮完成 ≥30 次”有真实证据。
+- §8 的 `/note`、`/draft`、`/drafts` 与草稿监控实现;
+- 工程门禁和独立审查通过;
+- 生产权限与文件夹由人工准备,只从 main 部署;
+- 真实飞书端到端和关键截图完成;
+- 首篇 Show 发布。

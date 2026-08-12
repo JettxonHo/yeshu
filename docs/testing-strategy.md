@@ -50,6 +50,6 @@ git diff --check
 - P0 测试覆盖本周一边界、延期优先、最多 3 张与超限 review 提醒;Stuck 测试覆盖状态、7 天边界、权重、最高分和严格 `score > 100`。
 - 周三测试覆盖状态计数与 Doing 至少 3 个整天未更新提醒;卡片测试只锁定核心语义和稳定结构,不机械固定全部 JSON。
 - workflow 测试/审查核对 UTC cron、`workflow_dispatch` 与 `fetch → analyze → build → push` 命令链;不使用真实 Secret 或外部 API。
-- 单元测试、CI 或 mock 不替代真实 Actions/飞书端到端、截图和 66 天行为数据。
+- 单元测试、CI 或 mock 不替代真实 Actions/飞书端到端与截图。66 天/≥30 次继续作为长期行为指标独立收集,不阻塞 V3,也不得因阶段推进而伪称达标。
 
 当前工程证据:`main@4b8c6df` 含 17 项 Python unittest 与 293 项 Worker 测试，PR #24 worker/python CI 双绿且独立审查 `APPROVED`；真实 daily/wednesday Actions→飞书验证仍待人工执行。
