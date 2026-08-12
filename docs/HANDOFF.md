@@ -38,7 +38,7 @@ python3 -m py_compile scripts/*.py
 ## 4. 当前开发边界
 
 - **架构**:阿里云 FC Worker(Hono;实时 `/add` `/today` + 卡片按钮回调)+ GitHub Actions(每日 08:00 推送)+ GitHub Projects V2(任务真相源)+ 飞书(交互入口)。
-- **工程状态**:V2-b 已由 PR #24 合并到 `main@4b8c6df`。下一步是从 main 人工验证 daily/wednesday Actions→飞书卡片并补截图/行为计数;另有 Issue #12 生产幂等与 #13 Branch Protection 独立待用户决定。V2 门槛未闭环前不进入 V3+。
+- **工程状态**:V2-b 已由 PR #24 合并到 `main@4b8c6df`;2026-08-12 已从 main 完成 daily/wednesday Actions→飞书真实空态路径并补两张脱敏截图。下一步只继续 V2 行为观察与计数;另有 Issue #12 生产幂等与 #13 Branch Protection 独立待用户决定。V2 门槛未闭环前不进入 V3+。
 - **工程坑位**(改代码前必读):
   1. 飞书带按钮卡片**必须用 V1 格式**(顶层 elements + `config.wide_screen`);V2 schema 2.0 不支持 `tag:"action"`(错误码 230099)。
   2. 卡片回调用 Method A 就地更新(200 响应直接返回新卡,单往返)。
@@ -75,6 +75,6 @@ CI 门禁(`.github/workflows/ci.yml`):指向 main 的 PR 自动触发 **worker +
 
 ## 7. 已知风险入口
 
-- **开放事项**:见 [docs/STATUS.md](STATUS.md)。V2-b 当前人工事项为 daily/wednesday Actions→飞书 E2E、截图和行为证据;Issue #12(生产幂等)与 #13(Branch Protection)仍独立开放。WIP 锁、语言重写、Encrypt Key 等延期项只在出现现实证据后重开。
+- **开放事项**:见 [docs/STATUS.md](STATUS.md)。V2-b 当前只剩 66 天按钮完成 ≥30 次的行为证据;最早观察完成日为 2026-10-06,当前没有可证明按钮完成次数的持久化计数。Issue #12(生产幂等)与 #13(Branch Protection)仍独立开放。WIP 锁、语言重写、Encrypt Key 等延期项只在出现现实证据后重开。
 - **历史字段迁移**:`docs/migrations/`(GitHub Projects 字段六状态化已于 2026-07-24 完成;一次性脚本已删除,禁止重演)。
 - **审计过程稿**:`docs/audits/` 为本地未入库工作区,不是事实依据。

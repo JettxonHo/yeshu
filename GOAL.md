@@ -2,9 +2,9 @@
 
 > 建立:2026-08-12
 >
-> 状态:COMPLETE_ENGINEERING / HUMAN_VALIDATION_PENDING
+> 状态:COMPLETE_ENGINEERING / ACTIONS_E2E_COMPLETE / BEHAVIOR_GATE_PENDING
 >
-> Goal 模式:V2-b 工程已合并；真实 Actions/飞书端到端、行为门槛和截图仍按事实单独验收
+> Goal 模式:V2-b 工程与真实 Actions/飞书端到端已完成；行为门槛仍按事实单独验收
 >
 > 产品边界:[Product-Spec.md](Product-Spec.md)
 >
@@ -20,7 +20,7 @@
 
 - Engineering:Issue #23 已关闭，PR #24 已 squash merge 为 `main@4b8c6df`，worker/python CI 双绿。
 - Production:仍运行 `eb20515c` 的 V2-a；本 Goal 不部署生产。
-- Validation:V2 行为数据继续 collecting；截图 DoD 未闭环。
+- Validation:2026-08-12 已完成 daily / Wednesday 真实飞书空态路径并保存两张脱敏截图；66 天按钮完成 ≥30 次仍 collecting / unverified。
 
 ## 3. Goal
 
@@ -33,7 +33,7 @@
 
 ## 4. 非 Goal
 
-- 生产部署、真实 Actions 手动触发、读取凭据或生产数据；
+- 生产 FC 部署、读取凭据或修改生产数据；
 - GitHub Project 字段迁移或 mutation；
 - V3-b 的交互式周日 Review；
 - V3 写作系统、V4 应用主页、V5 AI 教练；
@@ -54,7 +54,7 @@
 - M2 卡片与 workflow:✅ 每日和周三卡片、两个 Actions workflow 契约完成；
 - M3 工程门禁:✅ Python 3.11 17 项 unittest/py_compile、Worker 293 项 `npm run check`、diff-check 全绿；
 - M4 审查与合并:✅ 独立审查 `APPROVED`，PR #24 worker/python CI 双绿并合并为 `main@4b8c6df`；
-- M5 人工验证:由用户在真实飞书/Actions 环境完成推送、截图和行为计数后，才可将 V2-b 标记完成。
+- M5 人工验证:⏳ 真实飞书/Actions 推送与截图已完成；行为计数未完成。V2-a 自 2026-08-01 上线,66 天窗口最早于 2026-10-06 结束,且当前没有持久化按钮完成计数证据。
 
 ## 7. Task Contract
 
