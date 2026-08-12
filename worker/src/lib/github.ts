@@ -52,10 +52,17 @@ function projectNumber(env: Env): number {
   return n;
 }
 
-/** 项目字段元数据:node id + 各 single-select 字段(fieldId + optionName→optionId) */
+/** 项目字段元数据:node id + 类型 + 各 single-select 字段的 optionName→optionId */
 export interface ProjectMeta {
   projectId: string;
-  fields: Record<string, { fieldId: string; options: Record<string, string> }>;
+  fields: Record<
+    string,
+    {
+      fieldId: string;
+      dataType: string;
+      options: Record<string, string>;
+    }
+  >;
 }
 
 let cachedMeta: ProjectMeta | null = null;
@@ -69,7 +76,15 @@ export async function fetchProjectMeta(env: Env): Promise<ProjectMeta> {
         projectV2(number: $number) {
           id
           fields(first: 30) {
-            nodes { ...on ProjectV2SingleSelectField { id name options { id name } } }
+            nodes {
+              ...on ProjectV2Field { id name dataType }
+              ...on ProjectV2SingleSelectField {
+                id
+                name
+                dataType
+                options { id name }
+              }
+            }
           }
         }
       }
@@ -84,7 +99,10 @@ export async function fetchProjectMeta(env: Env): Promise<ProjectMeta> {
     if (!f.name) continue;
     fields[f.name] = {
       fieldId: f.id,
-      options: Object.fromEntries(f.options.map((o: any) => [o.name, o.id])),
+      dataType: f.dataType,
+      options: Array.isArray(f.options)
+        ? Object.fromEntries(f.options.map((o: any) => [o.name, o.id]))
+        : {},
     };
   }
   cachedMeta = { projectId: proj.id, fields };
@@ -210,6 +228,35 @@ export async function updateItemStatus(
   statusName: string,
 ): Promise<void> {
   await setItemField(env, itemId, "Status", statusName);
+}
+
+/** 设 ProjectV2 item 的文本字段(例如 Related Doc) */
+export async function updateItemTextField(
+  env: Env,
+  itemId: string,
+  fieldName: string,
+  value: string,
+): Promise<void> {
+  const meta = await fetchProjectMeta(env);
+  const field = meta.fields[fieldName];
+  if (!field) throw new Error(`未知字段:${fieldName}`);
+  if (field.dataType !== "TEXT") throw new Error(`字段不是文本:${fieldName}`);
+
+  const m = `
+    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
+      updateProjectV2ItemFieldValue(input: {
+        projectId: $projectId,
+        itemId: $itemId,
+        fieldId: $fieldId,
+        value: { text: $value }
+      }) { projectV2Item { id } }
+    }`;
+  await gql(env, "mutation", m, {
+    projectId: meta.projectId,
+    itemId,
+    fieldId: field.fieldId,
+    value,
+  });
 }
 
 /** 数某状态的 item 数(Slice 2 WIP 检查用) */
