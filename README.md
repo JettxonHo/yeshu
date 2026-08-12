@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-V2-b 硬验收已完成，V3-a 已启动；飞书 Docs 文档创建、读取与正文写入基础已合并，当前切片用官方元数据 API 获取正确文档 URL 与修改时间，`/note` 产品细节仍待确认。生产 Worker 仍运行 V2-a，66 天按钮完成 ≥30 次作为长期指标继续收集但不阻塞 V3。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
+V2-b 硬验收已完成，V3-a 已启动；飞书 Docs 文档创建、读取、正文与元数据基础已合并，当前切片增加 GitHub Project `Related Doc` 文本写入能力，`/note` 产品细节仍待确认。生产 Worker 仍运行 V2-a，66 天按钮完成 ≥30 次作为长期指标继续收集但不阻塞 V3。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
 
 ## 开发入口
 

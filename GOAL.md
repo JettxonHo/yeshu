@@ -2,7 +2,7 @@
 
 > 建立:2026-08-12
 >
-> 状态:ACTIVE / METADATA_TASK_CONTRACT_READY
+> 状态:ACTIVE / PROJECT_TEXT_TASK_CONTRACT_READY
 >
 > 产品边界:[Product-Spec.md](Product-Spec.md) §8、§14.1
 >
@@ -20,10 +20,10 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 
 ## 2. 当前状态
 
-- Engineering:V3-a Docs 创建/读取与正文写入已由 PR #32/#35 合并至 `main@d0d09e6`;305 项 Worker 测试与 PR CI 全绿。
+- Engineering:V3-a Docs 创建/读取/正文写入/元数据读取已由 PR #32/#35/#39 合并至 `main@95ee460`;314 项 Worker 测试与 PR CI 全绿。
 - Production:Worker 仍运行 `main@eb20515c` 的 V2-a;V2-b Actions active。
 - Validation:66 天/≥30 次仍 unverified;作为长期指标并行观察。
-- Contract:[Issue #37 · Feishu document metadata reader](https://github.com/JettxonHo/yeshu/issues/37) 已建立;`/note` 产品细节仍待确认。
+- Contract:[Issue #40 · GitHub Project text field writer](https://github.com/JettxonHo/yeshu/issues/40) 已建立;`/note` 产品细节仍待确认。
 
 ## 3. Goal
 
@@ -55,7 +55,7 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 ## 6. Milestones
 
 - M0 产品与合同:✅ Product-Spec 门槛修订与 V3-a Goal 由 PR #30 合并为 `main@070911a`;Milestone #3 与 Issue #29 已建立;
-- M1 Docs API 基础:✅ Issue #29/#33 由 PR #32/#35 合并,完成 create/read/append text;
+- M1 Docs API 基础:✅ Issue #29/#33/#37 由 PR #32/#35/#39 合并,完成 create/read/append text/metadata;
 - M2 `/note`:创建笔记文档并返回可打开卡片;
 - M3 `/draft`:创建草稿、目标字数、Show↔文档映射;
 - M4 `/drafts`:进度视图与 3 天/7 天提醒;
@@ -63,8 +63,8 @@ V2 三项硬验收均已完成,因此当前路由切换到 V3-a。
 
 ## 7. 当前 Task Contract
 
-- Issue #37 只允许修改 `worker/src/lib/lark.ts` 与 `worker/src/lib/external-clients.test.ts`,增加批量 Docs 元数据读取,返回正确 URL 与 `latest_modify_time`。
-- 该切片消除手工拼接租户域名,并为 `/drafts` 提供文档修改时间;不改变 `/note` 内部 ID/tag 产品决策。
+- Issue #40 只允许修改 `worker/src/lib/github.ts` 与 `worker/src/lib/external-clients.test.ts`,增加 ProjectV2 Text 字段写入。
+- 该切片为后续 Show↔文档的 `Related Doc` 映射提供能力;不查找/创建 Show,不改变 1:1/1:N 产品策略。
 - `/note` 仍需确认内部 ID、tag 与笔记文件夹 token 的最小方案;涉及 Product-Spec §8.2.2 的决策先改 spec,再建命令 Issue。
 - 保持不新增依赖、不运行 lark-cli、不触生产 API、不读取凭据。
 - `docs/audits/` 是用户材料,不读取、不修改、不暂存。
