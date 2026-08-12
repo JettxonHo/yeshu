@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-V2-b 工程已合并，daily / Wednesday Actions→飞书端到端与截图已完成；生产 Worker 仍运行 V2-a，66 天按钮完成 ≥30 次的行为门槛继续收集，V3 尚未启动。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
+V2-b 硬验收已完成，V3-a 已启动；首个切片是飞书 Docs OpenAPI 基础适配器(Issue #29)。生产 Worker 仍运行 V2-a，66 天按钮完成 ≥30 次作为长期指标继续收集但不阻塞 V3。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
 
 ## 开发入口
 

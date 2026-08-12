@@ -1,8 +1,8 @@
 # 野薯(Yeshu)· Development Plan
 
-> **版本**:2.0(2026-08-12 修订)
-> **本次修订**:V2-b 工程已由 PR #24 合并;真实 Actions/飞书端到端、行为成功标准与截图仍保留为完成门槛
-> **状态**:Phase 4(V2-b)⏳ Engineering complete / Human validation pending
+> **版本**:2.1(2026-08-12 修订)
+> **本次修订**:用户明确把 66 天/≥30 次改为长期指标;V2-b 硬验收完成,进入 V3-a
+> **状态**:Phase 5(V3-a)⏳ Goal active / first Task Contract ready
 > **维护**:本文档是开发计划真相源(怎么做)。产品决策见 [Product-Spec.md](Product-Spec.md),规范见 [AGENTS.md](AGENTS.md)。本文件不重复 spec 内容,只做开发拆解并引用 spec 章节。
 
 ---
@@ -11,7 +11,7 @@
 
 - **Phase 状态标记**:`⬜ 未开始` / `⏳ 进行中` / `⏸ 暂停` / `✅ 完成`(对应 AGENTS.md 协作规则 3)
 - **完成门槛**:每个 Phase 必须通过 AGENTS.md「四步走验证」(Code Review / 测试完整性 / 编译验证 / 功能测试)+ Phase 完成定义全勾,才算 ✅
-- **铁律**:**不达标不进下一 Phase**(spec §14.1)。Phase 间存在硬依赖,见各 Phase「依赖」字段
+- **铁律**:**当前硬验收不达标不进下一 Phase**(spec §14.1)。长期行为指标继续观测但不阻塞;Phase 间依赖见各 Phase「依赖」字段
 - **真相源**:产品功能/规则引用 spec 章节号(如 §5.2 = Product-Spec.md §5.2),开发决策写在本文件
 
 ---
@@ -24,9 +24,9 @@
 | **0** | **V0** | **零代码 Cowork 行为验证**:每天 08:02 推今日待办,验证"你会看推送" | 基线 | 30 min + 7 天验证 | ⏳ |
 | 1 | V1-a | GitHub Actions 推送系统(把 V0 即时代码正式化) | 0 | 3–5 天 | ✅ |
 | 2 | V1-b | Worker 实时层(阿里云 FC)+ `/add` + `/today` + 统一卡片构造器(完成 V1) | 1 | 5–7 天 | ✅ |
-| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | ~1 天 | ⏳(工程/生产验证完成;截图证据与行为门槛未闭环) |
-| 4 | V2-b | Stuck/P0 算法 + 周三体检推送(完成 V2) | 3 | 3–5 天 | ⏳ |
-| 5 | V3-a | 飞书云文档写作子系统(`/note` `/draft` `/drafts`) | 4 | 5–7 天 | ⬜ |
+| 3 | V2-a | 按钮回调 + 6 状态机 + WIP 检查 | 2 | ~1 天 | ⏳(工程/生产验证完成;历史截图证据待补,非 V3 门槛) |
+| 4 | V2-b | Stuck/P0 算法 + 周三体检推送(完成 V2) | 3 | 3–5 天 | ✅ |
+| 5 | V3-a | 飞书云文档写作子系统(`/note` `/draft` `/drafts`) | 4 | 5–7 天 | ⏳ |
 | 6 | V3-b | 周日 Review 5 步 + 想法子系统(完成 V3) | 5 | 3–5 天 | ⬜ |
 | 7 | V4 | 多维表格看板 + 应用主页 + Variable Reward 4 层 | 6 | 1–2 周 | ⬜ |
 | 8 | V5 | AI 教练(周复盘 + 异常诊断 + 输入输出比) | 7 | 长期 | ⬜ |
@@ -43,13 +43,13 @@
 ```
 📊 项目进度检测
 - Product Spec:✅(产品决策单一真相源)
-- DEV-PLAN   :✅(本文件 v2.0)
-- 项目代码   :✅(V1-a / V1-b / V2-a / V2-b Engineering merged)
-当前环节:Phase 4 · V2-b 人工验证
-  - Engineering :PR #24 已 merge 为 main@4b8c6df(293 项 Worker + 17 项 Python 测试,CI 双绿)
-  - Production  :线上 FC 运行从 main@eb20515c 构建并验证的 V2-a;幂等后端尚未启用
-  - Validation  :行为数据 collecting(V2 门槛:66 天按钮完成 ≥ 30,spec §14.1)
-下一步:从 main 人工运行 daily/wednesday Actions 并核对飞书卡片 → 保存截图 → 继续收集 66 天按钮完成 ≥30 的行为证据
+- DEV-PLAN   :✅(本文件 v2.1)
+- 项目代码   :✅(V2-b hard acceptance complete;V3-a 尚无代码)
+当前环节:Phase 5 · V3-a Docs OpenAPI 基础
+  - Engineering :V2-b PR #24 + E2E 证据 PR #28 已合并;V3-a Issue #29 已建立
+  - Production  :线上 FC 仍运行 main@eb20515c 的 V2-a;V2-b Actions active
+  - Validation  :66 天/≥30 次作为长期指标 collecting,不阻塞 V3
+下一步:Issue #29 实现飞书 Docs OpenAPI 基础适配器 → 独立审查 → PR CI
 ```
 
 ---
@@ -107,7 +107,7 @@
   - [ ] `.github/workflows/daily-push.yml`:cron `0 0 * * *`(UTC)= 北京 08:00(spec §11.4)
   - [ ] `scripts/fetch_data.py`:GraphQL 拉 Projects V2 卡片(Status/Priority/Type/字段,§4.3)
   - [ ] `scripts/build_card.py`:组装飞书卡片 JSON,今日 P0 最多 3 张(§7.2),套 §10.2 统一模板
-  - [ ] `scripts/push_lark.py`:lark-cli 推送到 `LARK_OPEN_ID`
+  - [x] `scripts/push_lark.py`:飞书 OpenAPI 推送到 `LARK_OPEN_ID`
   - [ ] 四步走验证全过(Code Review / 测试完整性 / `py_compile` / 端到端)
   - [ ] 截图存 `docs/screenshots/`
 - **涉及文件**:`.github/workflows/daily-push.yml`、`scripts/{fetch_data,build_card,push_lark}.py`、`cards/daily-push.example.json`
@@ -162,7 +162,7 @@
 - **依赖**:Phase 2
 - **测试**:`npm run dev` + curl 模拟 card.action.trigger;飞书点按钮卡片就地更新
 - **工作量**:5–7 天 → 实际 ~1 天
-- **状态**:⏳ 工程合并与生产功能验证完成,但 `docs/screenshots/` 缺少关键交互截图,不满足 AGENTS.md 的完整 Phase DoD;行为数据也仍 collecting(V2 门槛:66 天按钮完成 ≥ 30,§14.1)。后续 Reliability Hardening 状态以 `docs/STATUS.md` 为准。
+- **状态**:⏳ 工程合并与生产功能验证完成,但 `docs/screenshots/` 缺少本 Phase 历史关键交互截图,不满足 AGENTS.md 的完整 Phase DoD。66 天/≥30 次已改为长期指标并行 collecting,不是 V3 准入门槛;后续可靠性状态以 `docs/STATUS.md` 为准。
 - **关键决策**:① GitHub 内建 Status 扩到 6 态(非新建);② 飞书卡片用 **V1 格式**(V2 不支持 `tag:action`,230099);③ 回调返回刷新后的 /today 列表(非单项卡);④ V2-b 行为观察与开发并行
 
 ---
@@ -198,7 +198,7 @@
 
 ---
 
-### Phase 4 · V2-b · Stuck/P0 算法 + 周三体检 ⏳
+### Phase 4 · V2-b · Stuck/P0 算法 + 周三体检 ✅
 
 - **目标**:实现 spec §5 业务规则全量——Stuck 机制(§5.2)、P0 完整机制(§5.3)、延期 P0(§5.4)、周三 20:00 体检推送。**完成 V2**
 - **完成标准**:
@@ -207,8 +207,9 @@
   - [x] `.github/workflows/wednesday-check.yml`:cron `0 12 * * 3`(UTC)= 周三北京 20:00
   - [x] 体检卡片工程实现(进度 + Doing 3 天没动提醒)
   - [x] 从 main 真实触发 daily/wednesday workflow,确认飞书收到卡片并保存脱敏截图(2026-08-12;runs `31554628778` / `31554630892`;当时数据仅覆盖空 P0 / 无 Stuck / 无 Doing 超时路径)
-  - [ ] 四步走验证
-  - [ ] **V2 成功标准(spec §14.1):66 天按钮完成 ≥ 30 次**(与 Phase 3 合并,跨期累积)
+  - [x] 四步走验证(代码审查 / 293 Worker + 17 Python 测试 / 编译 / 真实飞书截图)
+  - [x] **V2 硬验收(spec §14.1,2026-08-12 修订)**:工程合并 + 真实 Actions→飞书 E2E + 脱敏截图
+  - [ ] **长期行为指标(不阻塞 V3)**:66 天按钮完成 ≥30 次
 - **涉及文件**:`scripts/analyze.py`、`.github/workflows/wednesday-check.yml`、`scripts/build_card.py`(体检卡)
 - **本轮实现决策**:
   1. Stuck 的 Last Updated 使用 `ProjectV2Item.updatedAt`;
@@ -218,15 +219,15 @@
 - **依赖**:Phase 3
 - **测试**:`act` 跑 wednesday-check;构造 Stuck 测试数据
 - **工作量**:3–5 天
-- **状态**:⏳ Engineering complete / Actions E2E complete / Behavior gate pending。Issue #23 已关闭,PR #24 已合并为 `main@4b8c6df`;2026-08-12 已完成真实 Actions→飞书空态路径与截图。V2-a 上线仅 11 天且没有可证明“按钮完成 ≥30 次”的持久化计数,因此 66 天行为门槛未完成,Phase 不标 ✅。
+- **状态**:✅ Complete under Product-Spec §14.1 revised gate。Issue #23 / PR #24 完成工程,2026-08-12 从 main 完成真实 Actions→飞书 E2E 与两张脱敏截图(PR #28)。66 天/≥30 次继续长期观测,不作为 Phase 5 阻塞项。
 
 ---
 
-### Phase 5 · V3-a · 飞书云文档写作子系统 ⬜
+### Phase 5 · V3-a · 飞书云文档写作子系统 ⏳
 
-- **目标**:实现 spec §8 写作子系统——飞书云文档为唯一写作入口,lark-cli 创建/拉元数据,`/note` `/draft` `/drafts` 命令,草稿进度监控(§8.4)。V3 内容闭环核心
+- **目标**:实现 spec §8 写作子系统——飞书云文档为唯一写作入口,生产通过 Docs/Drive OpenAPI 创建文档与读取元数据,提供 `/note` `/draft` `/drafts` 命令和草稿进度监控。V3 内容闭环核心
 - **完成标准**:
-  - [ ] `worker/src/lib/lark.ts`:lark-cli 封装(创建云文档 / 拉字数 / 修改时间)
+  - [ ] `worker/src/lib/lark.ts`:飞书 Docs OpenAPI 封装(创建云文档 / 拉纯文本与元数据)
   - [ ] `worker/src/commands/{note,draft,drafts}.ts`
   - [ ] 云文档目录结构(§8.3)
   - [ ] 草稿目标字数机制(§8.4)
@@ -236,9 +237,9 @@
   - [ ] **V3 成功标准(spec §14.1):首篇 Show 发布**
 - **涉及文件**:`worker/src/lib/lark.ts`、`worker/src/commands/{note,draft,drafts}.ts`、`scripts/fetch_data.py`(扩展拉草稿)
 - **依赖**:Phase 4
-- **测试**:`lark-cli ... --dry-run`;飞书收到草稿进度卡
+- **测试**:OpenAPI mock 合同 + 人工权限就绪后的飞书云文档 E2E;飞书收到草稿进度卡
 - **工作量**:5–7 天
-- **状态**:⬜
+- **状态**:⏳ Goal active。首个 Task Contract 为 Issue #29,仅建立 FC 可用的 Docs OpenAPI 适配器;不把 `/note`、`/draft`、目录配置和生产权限混入一个提交。
 
 ---
 
@@ -312,7 +313,7 @@
 |---|---|---|
 | Classic Token 泄漏 | 仓库 public,后果严重 | spec §12 三层保险;泄漏 5 分钟应急预案(§12.3) |
 | **Cowork 调用成本**(V0 新增) | 每天 Claude 会话消耗调用次数 | V0 是短期验证(7 天);通过后迁到 GitHub Actions(Phase 1,免费),Cowork 退役 |
-| lark-cli 版本/接口变化 | 推送/云文档操作失败 | 铁律 7 联网优先;dry-run 先行 |
+| 飞书 OpenAPI 契约/权限变化 | 推送/云文档操作失败 | 铁律 7 联网优先;mock 合同 + 人工权限 E2E |
 | GitHub Projects V2 GraphQL schema 变动 | 拉数据失败 | GraphQL Explorer 调试;mutation 有 try-catch |
 | Stuck/P0 算法误判 | 推送内容不准 | Phase 4 用构造数据测试;V0/Phase 1 只做最小 P0 选择 |
 | Fine-grained Token 陷阱 | 无法访问 Projects V2 | 只用 Classic Token(AGENTS.md FAQ) |
@@ -321,12 +322,13 @@
 
 ## 6. 下一步
 
-当前路由:**Phase 4 · V2-b 行为观察窗口**。后续按序执行,不跳步:
+当前路由:**Phase 5 · V3-a 飞书云文档写作基础**。后续按序执行:
 
 1. **V2-b 工程已完成**:Issue #23 / PR #24 已合并,Python 17 项与 Worker 293 项测试、独立审查、CI 双绿;
 2. **幂等生产启用单独推进**:等待用户决定,之后人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
 3. **Branch Protection 单独决策**:GitHub 当前未强制 required checks,未经用户确认不修改仓库设置;
 4. **克制处理其余旧债务**:WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
-5. **完成 V2-b 后才进入 V3**:真实 daily/wednesday Actions→飞书验证与截图已于 2026-08-12 完成;当前只剩行为门槛(66 天按钮完成 ≥ 30,spec §14.1)。观察窗口最早于 2026-10-06 结束,且当前没有按钮完成计数证据;闭环前不进入 Phase 5(V3-a)。
+5. **V3-a 已启动**:用户于 2026-08-12 明确调整 Product-Spec 门槛;Issue #29 先实现 Docs OpenAPI 基础,后续再按 `/note` → `/draft`/映射 → `/drafts`/监控拆分;
+6. **长期指标不伪造**:66 天窗口最早于 2026-10-06 结束,当前没有按钮完成计数证据;继续记录为 collecting,但不阻塞 V3 工程。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*

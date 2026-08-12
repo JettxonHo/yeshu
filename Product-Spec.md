@@ -2,7 +2,7 @@
 
 > **版本**:1.0
 > **日期**:2026-07-20
-> **状态**:产品决策稳定;V2-b 工程与 Actions→飞书 E2E/截图已完成,生产 Worker 仍为 V2-a;66 天行为验证 collecting
+> **状态**:V2-b 硬验收已完成,V3-a 已启动;66 天按钮行为指标继续长期观测,不阻塞阶段推进
 > **维护**:本文档是项目单一真相源,后续 dev-planner / dev-builder 以此为基础
 
 ---
@@ -75,7 +75,7 @@ ENFP 的失败不是能力问题,是认知功能栈(Ne-Fi-Te-Si)决定的——�
 | 层 | 角色 | 技术 |
 |---|---|---|
 | **任务/状态层** | 卡片、字段、优先级的真相源 | GitHub Projects V2(GraphQL) |
-| **内容层** | 笔记、草稿、发布的真相源 | 飞书云文档(lark-cli 操作) |
+| **内容层** | 笔记、草稿、发布的真相源 | 飞书云文档(生产用 OpenAPI;本地辅助可用 lark-cli) |
 | **桥接层** | 数据读写 + 推送 + AI | GitHub Actions + 阿里云 FC Worker + AI |
 
 ### 3.2 核心原则
@@ -382,9 +382,9 @@ Anchor Root/
 **关键**:野薯不持有内容,只持有元数据。内容在飞书云文档,自动保存。
 
 **流程**:
-1. `/draft 标题 [目标字数]` → bot 用 lark-cli 创建云文档
+1. `/draft 标题 [目标字数]` → bot 用飞书 Docs OpenAPI 创建云文档
 2. 用户点链接写,飞书自动保存
-3. 每天 08:00 cron → lark-cli 拉元数据(字数/修改时间)
+3. 每天 08:00 cron → 飞书 Docs OpenAPI 拉元数据(字数/修改时间)
 4. 3 天没改提醒 / 7 天没改进 Stuck
 
 **目标字数**(可选):
@@ -527,7 +527,7 @@ Anchor Root/
 | Worker 部署 | 阿里云 FC 3.0(Serverless Devs `s deploy`) |
 | Actions 脚本 | **Python** |
 | GitHub API | GraphQL v4 |
-| 飞书操作 | **lark-cli** |
+| 飞书操作 | **飞书 OpenAPI**(生产 Worker / Actions)+ lark-cli(V0 / 本地辅助) |
 | AI Provider | **DeepSeek** + OpenAI 兼容抽象 |
 | 缓存 | 阿里云(Tablestore / Redis),V2+ 按需 |
 | Secret | GitHub Secrets + FC 环境变量(Serverless Devs) |
@@ -592,7 +592,7 @@ async function callAI(prompt: string, env: Env): Promise<string> {
 ### 11.6 三个核心工作流
 
 **场景 1 · 每日推送**(Actions):
-cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/Stuck/Stats)→ build_card.py(组装 JSON)→ push_lark.py → 退出
+cron → fetch_data.py(拉 GraphQL + 飞书 Docs OpenAPI 元数据)→ analyze.py(算 P0/Stuck/Stats)→ build_card.py(组装 JSON)→ push_lark.py → 退出
 
 **场景 2 · /add 命令**(Worker):
 飞书消息 → Worker 接 webhook → 签名校验 → handleAdd → 智能推断 Priority → AI 生成标题(>20 字时)→ GraphQL mutation → 返回卡片(< 2 秒)
@@ -637,7 +637,7 @@ cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/St
 
 ### 13.2 整合策略
 
-- **飞书云文档**:内容真相源,直接用 lark-cli
+- **飞书云文档**:内容真相源,生产使用飞书 Docs/Drive OpenAPI;本地一次性辅助才使用 lark-cli
 - **GitHub Projects**:任务真相源,GraphQL 读写
 - **Notion / Obsidian**:不整合,各管各的
 - **Todoist / Things**:替代关系,选一个
@@ -659,17 +659,19 @@ cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/St
 |---|---|---|---|
 | **V0 · 验证期** | 本周,30 分钟 | **零代码**(行为验证):Cowork scheduled task + lark-cli,Cowork 定时启动 Claude 会话即时代码,只推每日 P0,不写脚本/Worker | 连续 **7 天**打开推送 |
 | **V1 · 单向闭环** | 2 周 | 阿里云 FC Worker + GitHub Actions,加 /today 和 /add | 14 天 /add **≥ 10 张** Idea |
-| **V2 · 双向闭环** | 1 个月 | 卡片按钮、状态切换、Stuck 推送 | **66 天**按钮完成 **≥ 30 次** |
+| **V2 · 双向闭环** | 1 个月 | 卡片按钮、状态切换、Stuck 推送 | 工程合并 + 从 main 完成真实 Actions→飞书 E2E + 脱敏截图 |
 | **V3 · 内容闭环** | 2 个月 | 飞书云文档写作子系统 | 首篇 Show 发布 |
 | **V4 · 应用形态** | 3 个月 | 多维表格看板 + 应用主页 | 自己每天用 |
 | **V5 · AI 教练** | 长期 | AI 周复盘 + 异常诊断 | 4 周 AI 复盘 + 输入输出比 < 3:1 |
 
-**铁律**:不达标不进下一阶段。
+**阶段准入调整(2026-08-12,用户明确确认)**:V2 的“66 天按钮完成 ≥30 次”保留为**长期行为指标**,继续观测但不再阻塞 V3。V2 的硬验收以工程合并、真实 Actions→飞书 E2E 和关键截图为准;三项已完成,因此允许进入 V3。V3 自身的成功标准仍是“首篇 Show 发布”,未降低。
+
+**铁律**:当前阶段的硬验收不达标不进下一阶段;长期行为指标不得被伪造成已达标,但可与后续阶段并行观测。
 
 ### 14.2 成功标准的科学依据
 
 - V0 的 7 天:Fogg Tiny Habits 的"可行性检查"
-- V2 的 66 天:UCL 2009 研究的习惯形成科学平均值
+- V2 的 66 天:UCL 2009 研究的习惯形成科学平均值,作为长期行为观察窗口,不再作为工程阶段准入门槛
 - 21 天是迷思(Maxwell Maltz 1960,被过度泛化)
 
 ### 14.3 开发顺序(MVP · C 方案)
@@ -703,7 +705,7 @@ cron → fetch_data.py(拉 GraphQL + lark-cli 云文档)→ analyze.py(算 P0/St
 11. **Hook 模型**:Trigger → Action → Variable Reward → Investment
 12. **克制优雅**:Linear 风,暗色优先,微交互,不喧宾夺主
 13. **公开仓库**:从 V0 就 public,强制做好安全,早期吸引反馈
-14. **科学驱动**:习惯标准基于 UCL 研究(66 天),不基于迷思(21 天)
+14. **科学驱动**:习惯观察仍采用 UCL 研究的 66 天窗口,但不把长期研究周期机械化成后续产品开发的等待锁
 15. **反 ENFP 本能**:限制并行、强制处理、不追求"全都要"——这是产品能活下来的根本
 
 ---
