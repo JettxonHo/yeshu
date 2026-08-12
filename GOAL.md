@@ -1,10 +1,10 @@
-# 野薯当前 Goal · Reliability Continuation
+# 野薯当前 Goal · V2-b 双向闭环完成
 
 > 建立:2026-08-12
 >
-> 状态:COMPLETE_ENGINEERING / HUMAN_ACTION_PENDING
+> 状态:IN_PROGRESS / VALIDATION_PENDING
 >
-> Goal 模式:按照既定阶段门槛继续完成可自动推进的工程任务
+> Goal 模式:用户已明确授权启动 V2-b 工程；真实行为门槛、端到端验证和截图仍按事实单独验收
 >
 > 产品边界:[Product-Spec.md](Product-Spec.md)
 >
@@ -12,125 +12,69 @@
 
 ## 1. 执行摘要
 
-项目已具备 V1-a、V1-b、V2-a 的工程能力，生产 Worker 仍停在 V2-a 部署基线。本轮已完成 Python 每日推送的 ProjectV2 cursor 分页与 CI 测试；其余自动化工程债务要么受人工权限阻塞，要么缺乏现实触发证据，当前不扩张 V2-b 或后续产品功能。
+在现有 V2-a 按钮与状态机之上，完成 Actions 侧的 P0/Stuck 分析和周三体检推送，使野薯具备 Product-Spec §5.2–5.4、§7.1–7.3 与 §11.4/11.6 定义的 V2-b 工程能力。
+
+用户于 2026-08-12 明确确认进入 V2-b。该确认授权工程启动，不等于 V2 成功标准已经达标；“66 天按钮完成 ≥30 次”、真实飞书端到端验证和关键截图仍是 V2-b 完成条件。
 
 ## 2. 当前状态
 
-- Engineering:Python 分页代码合并基线 `main@89b3da6` 已含持久化幂等核心、外部 HTTP 边界修复、接管治理，以及 Worker/Python daily-push 的 ProjectV2 cursor 分页；PR #20 CI 双绿并已合并，后续纯文档提交不改变该代码基线。
-- Production:仍运行 `eb20515c`；幂等后端未启用。
-- Validation:V0/V1/V2 行为门槛仍 collecting；截图 DoD 未闭环。
+- Engineering:V2-b 开发中，Task Contract 为 [Issue #23](https://github.com/JettxonHo/yeshu/issues/23)。
+- Production:仍运行 `eb20515c` 的 V2-a；本 Goal 不部署生产。
+- Validation:V2 行为数据继续 collecting；截图 DoD 未闭环。
 
-## 3. 仓库与 GitHub 快照
+## 3. Goal
 
-- 仓库:`JettxonHo/yeshu`，public，默认分支 `main`。
-- 2026-08-08 接管后建立 Milestone #1 与 Issues #9-#13/#17，并合并 PR #14-#16/#18；2026-08-12 的 Issue #19 / PR #20 已完成 Python 查询正确性收口。
-- CI workflow 存在且历史运行成功，但 GitHub API 返回 `main` 未启用 Branch Protection，因此 required checks 尚未由平台强制。
-- `docs/audits/` 是未跟踪用户材料，不读取、不修改、不纳入自动提交。
+1. 扩展 Python ProjectV2 数据契约，提供 P0/Stuck 所需的 Status、Priority 与更新时间；
+2. 实现每日 P0 选择、延期识别、Stuck Score、最高分提醒与紧急标记；
+3. 把每日推送接入 `fetch → analyze → build → push` 流水线；
+4. 新增周三 20:00 体检，展示状态进度与 Doing 三天未更新提醒；
+5. 以固定时间单元测试、Python/Worker 门禁、独立审查与 PR CI 证明工程正确性；
+6. 准确记录工程、生产、行为验证和截图四者的边界。
 
-## 4. 产品范围
+## 4. 非 Goal
 
-以 Product-Spec §14 的阶段门槛为边界。当前不实现 Stuck/P0、周三体检、写作系统、应用主页、段位或 AI 教练。
+- 生产部署、真实 Actions 手动触发、读取凭据或生产数据；
+- GitHub Project 字段迁移或 mutation；
+- V3-b 的交互式周日 Review；
+- V3 写作系统、V4 应用主页、V5 AI 教练；
+- WIP 原子锁、Python→TypeScript 重写、Encrypt Key、哈希/SHA-256 或低概率防御扩张；
+- 把 mock/CI 结果写成真实端到端或行为门槛达标。
 
-## 5. 用户与利益相关者
+## 5. 关键工程决策
 
-- 核心用户与产品决策者:仓库所有者，单用户自建部署。
-- 运行依赖:飞书、GitHub Projects V2、GitHub Actions、阿里云 FC/Tablestore。
-- Agent 只能处理仓库工程；生产资源、凭证和部署由用户批准并执行。
+1. Stuck 的 Last Updated 使用 GitHub `ProjectV2Item.updatedAt`；
+2. 延期 P0 使用 Priority 字段值自身的 `updatedAt` 与 Asia/Shanghai 本周一 00:00 比较，不新增字段；
+3. 空 Priority 的 Stuck 权重按最低档 0.5，保持可见但不提高优先级；
+4. P0 超限只输出明确的 `review_required` 提醒，不在本切片引入交互 mutation；交互式 Review 保留在 V3-b；
+5. 只使用 Python 标准库与既有 `requests`，不新增依赖。
 
-## 6. Goal 与非 Goal
+## 6. Milestones
 
-Goal:
+- M1 数据与分析:完整规范化 item；P0/Stuck/周三分析通过固定时间测试；
+- M2 卡片与 workflow:每日和周三卡片、两个 Actions workflow 契约完成；
+- M3 工程门禁:Python 3.11+ unittest/py_compile、Worker `npm run check`、diff-check 全绿；
+- M4 审查与合并:独立审查 `APPROVED`，PR worker/python CI 双绿并合并；
+- M5 人工验证:由用户在真实飞书/Actions 环境完成推送、截图和行为计数后，才可将 V2-b 标记完成。
 
-1. 合并外部 HTTP 超时、安全重试边界、错误脱敏与 Hono 依赖修复；
-2. 补齐 Worker 的 GitHub ProjectV2 cursor 分页，消除 50/100 项截断；
-3. 建立可复用的 Goal、Issue、Task Contract、PR、审查与测试记录；
-4. 把持久化幂等生产启用整理为可执行的人工任务；
-5. 为 Python 每日推送补齐 ProjectV2 cursor 分页和可执行的 Python CI 测试。
+## 7. Task Contract
 
-非 Goal:生产部署、读取生产凭证、自动修改 Branch Protection、扩大产品范围、为低概率 case 堆防御、引入哈希/SHA-256。
+- 当前实现任务:[Issue #23 · V2-b Stuck/P0 与周三体检](https://github.com/JettxonHo/yeshu/issues/23)。
+- 实现 Agent 只修改 Issue allowlist；主控拥有 Goal/计划/状态/测试文档。
+- `docs/audits/` 是用户材料，不读取、不修改、不暂存。
+- 生产幂等与 Branch Protection 继续由 Issues #12/#13 独立追踪，不混入本 Goal。
 
-## 7. 已定与待定决策
+## 8. 完成标准
 
-已定:Worker 与 Python 每日推送的 GraphQL items 分页均已完成；mutation 不自动重试；产品行为门槛与工程门禁分开。待用户决定:是否启用 `main` Branch Protection；何时准备 Tablestore/RAM 并从 main 人工部署。
+工程完成必须满足:
 
-## 8. 当前架构
+- Issue #23 的行为与测试验收全部通过；
+- 独立代码审查结论为 `APPROVED`；
+- PR worker/python CI 双绿并合并 main；
+- `GOAL.md`、`DEV-PLAN.md`、`docs/STATUS.md` 一致；
+- 未部署时明确写“未部署”，缺真实推送/截图/行为计数时明确写“待人工验证”。
 
-详见 [docs/architecture.md](docs/architecture.md)。任务真相源为 GitHub Projects V2；飞书是交互入口；FC Worker 处理实时事件；Actions/Python 处理每日推送。
+V2-b 完整完成还必须满足:
 
-## 9. 技术栈
-
-TypeScript strict、Hono、Node.js 20、Vitest、esbuild、阿里云 FC 3.0、Tablestore；Python 3.11+ 与 GitHub Actions；GitHub GraphQL；飞书 OpenAPI；OpenAI-compatible AI 抽象。
-
-## 10. 数据模型
-
-核心状态为 Backlog/Next/Doing/Paused/Done/Abandoned；GitHub ProjectV2 item ID 是按钮 mutation 主键；飞书 message_id/event_id 仅用于幂等 claim；Tablestore 只保存短期 claim 元数据，不持有用户内容。
-
-## 11. 模块边界
-
-- `worker/src/app.ts`:Webhook 路由与幂等编排；
-- `worker/src/commands/`:用例编排与用户反馈；
-- `worker/src/lib/github.ts`:Projects V2 读写；
-- `worker/src/lib/http.ts`:外部 HTTP 策略；
-- `worker/src/lib/lark.ts`:飞书 token/发卡片；
-- `worker/src/lib/atomic-*`、`idempotency.ts`:原子 claim；
-- `scripts/` + `daily-push.yml`:每日主动推送。
-
-## 12. 风险与技术债务
-
-按当前价值排序:
-
-1. 生产幂等未启用——现实重复 mutation 风险，但受人工云资源/部署阻塞；
-2. `/add` 多步 mutation 可能留下无状态 item——先观察真实发生率，再决定补偿方案；
-3. WIP TOCTOU——单用户低并发，暂缓，出现真实越限证据再设计锁；
-4. 部署版本/回滚未工具化——保留人工 runbook，暂不自动部署。
-
-## 13. Milestones
-
-- M1 接管基线:PR #14/#15 已合并。
-- M2 查询正确性:Worker ProjectV2 cursor 分页已由 Luna 实现，经主控 `APPROVED` 与 CI 后由 PR #16 合并。
-- M3 运维就绪:幂等生产任务 #12 具备清晰人工前置、验证与回退条件；Agent 不代替用户执行。
-- M4 Goal 收口:Issue #17 同步最终状态；无未解释的自动化工程 blocker，行为验证继续独立收集。
-- M5 Actions 查询正确性:Issue #19 / PR #20 已完成 Python ProjectV2 cursor 分页、单元测试、独立审查与 CI 合并。
-
-## 14. 首批 Issues
-
-1. [#9 合并外部 HTTP 边界与依赖修复](https://github.com/JettxonHo/yeshu/issues/9)；
-2. [#10 固化 Goal 与 Agent/Issue/PR 工作流](https://github.com/JettxonHo/yeshu/issues/10)；
-3. [#11 Worker ProjectV2 cursor 分页](https://github.com/JettxonHo/yeshu/issues/11)；
-4. [#12 Tablestore 幂等生产启用](https://github.com/JettxonHo/yeshu/issues/12)（人工/外部阻塞）；
-5. [#13 `main` Branch Protection 决策](https://github.com/JettxonHo/yeshu/issues/13)（需用户确认）。
-6. [#17 Reliability Hardening 工程状态收口](https://github.com/JettxonHo/yeshu/issues/17)。
-7. [#19 Python 每日推送 ProjectV2 cursor 分页](https://github.com/JettxonHo/yeshu/issues/19)。
-
-## 15. Task Contract
-
-Task Contract 的必填字段与 Result Packet 见 [docs/agent-collaboration.md](docs/agent-collaboration.md)。每个实现任务必须限制允许文件、禁止动作、验收与验证命令；不得用“顺手修复”扩范围。
-
-## 16. 测试策略
-
-详见 [docs/testing-strategy.md](docs/testing-strategy.md)。当前基线:生产依赖 audit=0、typecheck 通过、17 个 Worker 测试文件/293 项与 4 项 Python unittest 通过、build 通过、Python 3.11 `py_compile` 通过。
-
-## 17. 分支、PR 与合并
-
-详见 [docs/issue-and-pr-workflow.md](docs/issue-and-pr-workflow.md)。不直接 push main；每个 PR 指向单一任务；先审查再合并；生产部署不包含在普通工程 PR 中。
-
-## 18. Agent 分工与模型状态
-
-- 主控逻辑角色:`ORCHESTRATOR_REVIEWER`；负责规划、Issue、Task Contract、验收与合并决策。
-- 实现角色:`luna-worker`；配置映射为 `gpt-5.6-luna`/`max`，2026-08-08 已成功执行只读审计与 Issue #11 分页实现。
-- 模型状态:`UNVERIFIED_RUNTIME_MODEL`。配置已核验，但运行时未暴露实际模型标识；不使用 Terra 回退。
-
-## 19. 权限与安全
-
-允许仓库内编辑、测试、分支、PR、Issue；禁止读取/输出 `.env`、secret、生产数据，禁止 Agent 部署。Branch Protection、Tablestore/RAM、FC 环境变量与生产部署需要用户确认。安全方案遵循 AGENTS.md 的克制原则。
-
-## 20. 开放问题与下一步
-
-自动化工程范围已完成。后续需要用户决定两件事:是否启用 Branch Protection、何时进行幂等生产启用；在明确授权前保持 #12/#13 OPEN。V0/V1/V2 行为计数与截图继续由用户提供真实证据；这些证据未闭环前不进入 V2-b。
-
-## Goal 完成标准
-
-- M1/M2/M5 的 PR 均合并且 CI 绿；
-- 所有工程 Issue 有明确完成、延期理由或人工 blocker；
-- `docs/STATUS.md`、`DEV-PLAN.md` 与 GitHub 状态一致；
-- 不声称生产幂等、行为门槛或截图 DoD 已完成，除非有真实证据。
+- 从 main 进行真实 Actions/飞书端到端验证；
+- 关键交互截图进入 `docs/screenshots/`；
+- V2 行为成功标准“66 天按钮完成 ≥30 次”有真实证据。

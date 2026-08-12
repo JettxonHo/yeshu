@@ -9,14 +9,35 @@ from unittest.mock import Mock, patch
 import fetch_data
 
 
-def _item(item_id: str, title: str, status: str) -> dict[str, Any]:
+def _item(
+    item_id: str,
+    title: str,
+    status: str,
+    priority: str = "",
+    updated_at: str = "2026-08-12T00:00:00Z",
+    priority_updated_at: str | None = None,
+) -> dict[str, Any]:
     """构造一个最小的 ProjectV2 item mock。"""
+    fields: list[dict[str, Any]] = [
+        {
+            "name": status,
+            "updatedAt": updated_at,
+            "field": {"name": "Status"},
+        }
+    ]
+    if priority:
+        fields.append(
+            {
+                "name": priority,
+                "updatedAt": priority_updated_at or updated_at,
+                "field": {"name": "Priority"},
+            }
+        )
     return {
         "id": item_id,
+        "updatedAt": updated_at,
         "content": {"title": title},
-        "fieldValues": {
-            "nodes": [{"name": status, "field": {"name": "Status"}}]
-        },
+        "fieldValues": {"nodes": fields},
     }
 
 
@@ -53,10 +74,17 @@ class FetchProjectItemsTests(unittest.TestCase):
     def test_two_pages_pass_cursor_and_expose_second_page_active_item(self) -> None:
         """第二页使用第一页 cursor,且第二页活跃任务进入每日推送结果。"""
         first_page = [
-            _item(f"item-{index}", f"历史任务 {index}", "Done")
-            for index in range(49)
+            _item(f"item-{index}", f"历史任务 {index}", "Done") for index in range(49)
         ] + [_item("item-backlog", "首页 Backlog", "Backlog")]
-        second_page = [_item("item-doing", "第二页 Doing", "Doing")]
+        second_page = [
+            _item(
+                "item-doing",
+                "第二页 Doing",
+                "Doing",
+                priority="P2",
+                priority_updated_at="2026-08-11T00:00:00Z",
+            )
+        ]
         responses = [
             _response(_page(first_page, True, "cursor-page-1")),
             _response(_page(second_page, False, "cursor-page-2")),
@@ -66,6 +94,17 @@ class FetchProjectItemsTests(unittest.TestCase):
             items = fetch_data.fetch_project_items("token", "login", 1)
 
         self.assertEqual(len(items), 51)
+        self.assertEqual(
+            items[-1],
+            {
+                "id": "item-doing",
+                "title": "第二页 Doing",
+                "status": "Doing",
+                "priority": "P2",
+                "updated_at": "2026-08-12T00:00:00Z",
+                "priority_updated_at": "2026-08-11T00:00:00Z",
+            },
+        )
         self.assertEqual(
             fetch_data.extract_todos(items),
             [
@@ -83,6 +122,14 @@ class FetchProjectItemsTests(unittest.TestCase):
             "endCursor",
         ):
             self.assertIn(fragment, query)
+        self.assertIn("id\n              updatedAt", query)
+        self.assertIn(
+            "...on ProjectV2ItemFieldSingleSelectValue {\n"
+            "                    name\n"
+            "                    updatedAt",
+            query,
+        )
+        self.assertGreaterEqual(query.count("updatedAt"), 2)
         first_variables = post.call_args_list[0].kwargs["json"]["variables"]
         second_variables = post.call_args_list[1].kwargs["json"]["variables"]
         self.assertIsNone(first_variables["after"])
@@ -105,7 +152,27 @@ class FetchProjectItemsTests(unittest.TestCase):
         ) as post:
             items = fetch_data.fetch_project_items("token", "login", 1)
 
-        self.assertEqual(items, page)
+        self.assertEqual(
+            items,
+            [
+                {
+                    "id": "item-one",
+                    "title": "第一页",
+                    "status": "Backlog",
+                    "priority": "",
+                    "updated_at": "2026-08-12T00:00:00Z",
+                    "priority_updated_at": None,
+                },
+                {
+                    "id": "item-two",
+                    "title": "第二张",
+                    "status": "Next",
+                    "priority": "",
+                    "updated_at": "2026-08-12T00:00:00Z",
+                    "priority_updated_at": None,
+                },
+            ],
+        )
         self.assertEqual(post.call_count, 1)
         self.assertEqual(len({item["id"] for item in items}), len(items))
 

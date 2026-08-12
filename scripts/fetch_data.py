@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """fetch_data.py · 从 GitHub Projects V2 拉今日待办(野薯 V1-a,Phase 1)
 
-从环境变量读凭据,GraphQL 查项目卡片,筛 Status ∈ {Backlog, Next, Doing, Paused}
-(六状态模型的活跃状态,与 Worker /today 可见状态一致),
-输出待办列表 JSON 到 stdout,供下游 build_card.py 消费。
+从环境变量读凭据,GraphQL 查项目卡片并按字段名解析 Status/Priority
+(六状态模型的活跃状态与终态),
+输出全部规范化 item JSON 到 stdout,供下游 analyze.py 消费。
 
 环境变量:GITHUB_TOKEN / GITHUB_LOGIN / GITHUB_PROJECT_NUMBER
 """
@@ -33,7 +33,7 @@ def read_env(key: str) -> str:
 
 
 def fetch_project_items(token: str, login: str, number: int) -> list[dict]:
-    """GraphQL 查项目卡片 + Status 字段,返回 items 节点。失败则友好退出。"""
+    """GraphQL 查项目卡片并返回全部规范化 item。失败则友好退出。"""
     query = """
     query($login: String!, $number: Int!, $after: String) {
       user(login: $login) {
@@ -41,11 +41,14 @@ def fetch_project_items(token: str, login: str, number: int) -> list[dict]:
           items(first: 50, after: $after) {
             pageInfo { hasNextPage endCursor }
             nodes {
+              id
+              updatedAt
               content { ...on DraftIssue { title } ...on Issue { title number url } }
               fieldValues(first: 10) {
                 nodes {
                   ...on ProjectV2ItemFieldSingleSelectValue {
                     name
+                    updatedAt
                     field { ...on ProjectV2FieldCommon { name } }
                   }
                 }
@@ -80,27 +83,43 @@ def fetch_project_items(token: str, login: str, number: int) -> list[dict]:
             sys.exit(1)
 
         connection = data["data"]["user"]["projectV2"]["items"]
-        items.extend(connection["nodes"])
+        items.extend(normalize_item(item) for item in connection["nodes"])
         if not connection["pageInfo"]["hasNextPage"]:
             return items
         after = connection["pageInfo"]["endCursor"]
 
 
-def extract_todos(items: list[dict]) -> list[dict]:
-    """筛 ACTIVE_STATUSES 的待办,最多 5 张,返回 [{title, status}]。
+def normalize_item(item: dict) -> dict:
+    """把 GitHub item 转为分析层稳定使用的字段契约。"""
+    content = item.get("content") or {}
+    status = ""
+    priority = ""
+    priority_updated_at: str | None = None
+    for field_value in (item.get("fieldValues") or {}).get("nodes", []):
+        field = field_value.get("field") or {}
+        field_name = field.get("name")
+        if field_name == "Status":
+            status = field_value.get("name") or ""
+        elif field_name == "Priority":
+            priority = field_value.get("name") or ""
+            priority_updated_at = field_value.get("updatedAt")
+    return {
+        "id": item.get("id", ""),
+        "title": content.get("title") or "(无标题)",
+        "status": status,
+        "priority": priority,
+        "updated_at": item.get("updatedAt"),
+        "priority_updated_at": priority_updated_at,
+    }
 
-    只在字段名为 Status 时取其 option name 作为状态;Priority/Type/Effort
-    等其他 Single Select 字段不参与,避免误把它们当成 Status。
-    """
+
+def extract_todos(items: list[dict]) -> list[dict]:
+    """筛 ACTIVE_STATUSES 的待办,最多 5 张,返回 [{title, status}]。"""
     todos: list[dict] = []
     for it in items:
-        content = it.get("content") or {}
-        title = content.get("title") or "(无标题)"
-        status = ""
-        for fv in (it.get("fieldValues") or {}).get("nodes", []):
-            field = fv.get("field") or {}
-            if field.get("name") == "Status":
-                status = fv.get("name") or ""
+        normalized = it if "status" in it else normalize_item(it)
+        title = normalized.get("title") or "(无标题)"
+        status = normalized.get("status") or ""
         if status in ACTIVE_STATUSES:
             todos.append({"title": title, "status": status})
     return todos[:5]
@@ -120,8 +139,7 @@ def main() -> None:
         sys.exit(1)
 
     items = fetch_project_items(token, login, number)
-    todos = extract_todos(items)
-    json.dump(todos, sys.stdout, ensure_ascii=False)
+    json.dump(items, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
 
 

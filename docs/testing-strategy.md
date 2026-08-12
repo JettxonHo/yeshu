@@ -42,3 +42,12 @@ git diff --check
 - `hasNextPage=false` 后停止；聚合结果保持现有状态过滤与字段解析。
 - Worker query 仍按现有策略有界重试；Python daily-push 保持既有请求与错误语义；mutation 行为不得改变。
 - 不要求真实 PAT、FC、Tablestore 或生产数据。
+
+## V2-b Actions 切片验收
+
+- 所有时间相关测试注入固定的 timezone-aware `datetime`,不依赖运行当天或机器时区。
+- GraphQL 契约测试必须约束 item `updatedAt` 与 Priority 字段值 `updatedAt`,同时保留既有 cursor 分页回归保护。
+- P0 测试覆盖本周一边界、延期优先、最多 3 张与超限 review 提醒;Stuck 测试覆盖状态、7 天边界、权重、最高分和严格 `score > 100`。
+- 周三测试覆盖状态计数与 Doing 至少 3 个整天未更新提醒;卡片测试只锁定核心语义和稳定结构,不机械固定全部 JSON。
+- workflow 测试/审查核对 UTC cron、`workflow_dispatch` 与 `fetch → analyze → build → push` 命令链;不使用真实 Secret 或外部 API。
+- 单元测试、CI 或 mock 不替代真实 Actions/飞书端到端、截图和 66 天行为数据。
