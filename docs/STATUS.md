@@ -11,7 +11,7 @@
 | V2-a 交互状态机 | merged / CI green | deployed and verified | collecting |
 | Reliability Continuation | complete on `main@89b3da6` | 幂等后端尚未启用 | not applicable |
 | V2-b | complete / CI green (`main@4b8c6df`) | Actions active / E2E verified on `main@c75c84d` | hard acceptance complete; longitudinal metric collecting |
-| V3-a | Docs create/read merged (`main@90bc964`); Issue #33 ready | not deployed | mock contract only; real Docs E2E not started |
+| V3-a | Docs create/read/write merged (`main@d0d09e6`); `/note` design pending | not deployed | mock contract only; real Docs E2E not started |
 
 三轴含义:
 
@@ -36,7 +36,7 @@
    4. curl smoke test(GET / 200 + challenge 原样回显 + 错误 token fail-closed);
    5. 飞书原生测试(/add 建卡、/today 分组卡、按钮全流转、旧卡片拒绝)。
 7. **阶段门槛已由用户明确调整**:2026-08-12 用户确认提前进入 V3,将“66 天按钮完成 ≥30 次”从 V3 硬性准入改为长期行为指标。V2 的硬验收改为工程合并 + 从 main 真实 Actions→飞书 E2E + 脱敏截图,三项均已完成。66 天窗口最早于 2026-10-06 结束,当前没有持久化按钮完成计数,所以该长期指标仍 collecting / unverified,但不阻塞 V3。
-8. Reliability Continuation 自动化工程 Goal 已完成;幂等生产启用与 Branch Protection 仍由 Issues #12/#13 独立追踪。V3-a 首个工程切片 Issue #29 已完成,当前 Task Contract 为 Issue #33;V3-b、应用主页、段位成就与 AI 教练未启动。
+8. Reliability Continuation 自动化工程 Goal 已完成;幂等生产启用与 Branch Protection 仍由 Issues #12/#13 独立追踪。V3-a 的 Docs create/read/write 基础已完成,`/note` 设计待确认;V3-b、应用主页、段位成就与 AI 教练未启动。
 9. 持久化幂等核心的工程基线 commit 为 `422e32c39943e8a38f9b95a4385ca57e414eb0d1`:Tablestore 适配器、配置校验和 264 项测试已合并,但 Tablestore 资源准备、生产配置与从 main 部署尚未执行。因此生产仍运行 `eb20515c` 的 V2-a 基线,不能声称幂等已在线生效;当前 main tip 应实时查询 GitHub 分支,不在本文固定。
 10. 2026-08-06 接手审计发现 Hono `<4.12.34` 新披露的 moderate CORS ReDoS 漏洞;PR #14 已把最低版本提升至官方修复下限并解析到 `4.13.0`,2026-08-08 以 squash commit `65d1a4c` 合并 main,`npm audit` 为 0,CI worker/python 双绿。
 11. **Phase DoD 证据状态**:V2-b 的 daily / Wednesday 两张脱敏卡片截图已进入 `docs/screenshots/`;V0/V1/V2-a 的历史关键交互截图仍缺失,作为历史证据缺口继续记录,不被本次产品门槛调整伪装为已补齐。
@@ -46,7 +46,7 @@
 15. 用户于 2026-08-12 明确授权真实 V2-b 验收。`daily-push.yml` run [`31554628778`](https://github.com/JettxonHo/yeshu/actions/runs/31554628778) 与 `wednesday-check.yml` run [`31554630892`](https://github.com/JettxonHo/yeshu/actions/runs/31554630892) 均从 `main@c75c84d` 手动触发并成功;飞书真实收到“今日 P0 + Stuck”与“周三体检”卡片,脱敏截图见 [`v2b-daily-p0-stuck.png`](screenshots/v2b-daily-p0-stuck.png) 和 [`v2b-wednesday-check.png`](screenshots/v2b-wednesday-check.png)。当时数据为 P0 0、无 Stuck、Doing 0、Done 4、Abandoned 8,因此本次线上 E2E 证明了工作流、推送、卡片 schema 与空态路径,不冒充非空 P0/Stuck/Doing 提醒的生产数据验证;这些分支仍由固定时间单测与 mutation-sensitive 契约覆盖。
 16. **V3-a 已启动**:Product-Spec §14.1 与 V3-a Goal 已由 PR #30 合并为 `main@070911a`;Phase 4 标记完成,Issue #27 与 Milestone #2 已关闭。该调整改变阶段准入,不改变“66 天/≥30 次尚无真实证据”的事实。
 17. V3 生产实现使用现有飞书应用的 tenant token 调用 Docs/Drive OpenAPI,不依赖 FC 中不存在的本地 `lark-cli` 登录态。Issue #29 / PR #32 已于 2026-08-12 合并为 `main@90bc964`,提供 `createDocument` 与 `getDocumentRawContent`;17 个测试文件 / 302 项、audit、typecheck、build 与 PR worker/python CI 全绿。该代码未部署,也未调用真实 Docs API。
-18. 飞书创建文档接口只支持标题,不能同时写正文;文档 ID 同时是根 Page Block ID。下一切片 Issue #33 只增加根块 Text Block 写入,之后才进入 `/note` 命令。文件夹权限、生产配置、部署与真实 E2E 仍是未完成边界。
+18. 飞书创建文档接口只支持标题,不能同时写正文;文档 ID 同时是根 Page Block ID。Issue #33 / PR #35 已于 2026-08-12 合并为 `main@d0d09e6`,增加根块 Text Block 写入;17 个测试文件 / 305 项、audit、typecheck、build 与 PR worker/python CI 全绿。`/note` 命令、文件夹权限、生产配置、部署与真实 E2E 仍未完成。
 
 ## 剩余可靠性工作(Reliability Hardening 清单)
 

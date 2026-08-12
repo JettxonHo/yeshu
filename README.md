@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-V2-b 硬验收已完成，V3-a 已启动；飞书 Docs 文档创建/读取基础已合并，当前切片是正文 Text Block 写入(Issue #33)，之后进入 `/note`。生产 Worker 仍运行 V2-a，66 天按钮完成 ≥30 次作为长期指标继续收集但不阻塞 V3。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
+V2-b 硬验收已完成，V3-a 已启动；飞书 Docs 文档创建、读取与正文写入基础已合并，下一步确认 `/note` 设计。生产 Worker 仍运行 V2-a，66 天按钮完成 ≥30 次作为长期指标继续收集但不阻塞 V3。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
 
 ## 开发入口
 
