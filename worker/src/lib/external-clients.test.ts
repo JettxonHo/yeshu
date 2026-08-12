@@ -386,6 +386,307 @@ describe("飞书 Docs OpenAPI", () => {
     await expect(promise).rejects.toMatchObject({ kind: "remote-error" });
     await expect(promise).rejects.not.toThrow(/private raw detail/);
   });
+
+  it("批量读取元数据锁定 endpoint、body、Bearer 与字段映射且不依赖响应顺序", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            metas: [
+              {
+                request_doc_info: {
+                  doc_token: "doxcn-b",
+                  doc_type: "docx",
+                },
+                title: "第二篇",
+                url: "https://tenant.feishu.cn/docx/doxcn-b",
+                latest_modify_time: "1700000002",
+              },
+              {
+                request_doc_info: {
+                  doc_token: "doxcn-a",
+                  doc_type: "docx",
+                },
+                title: "第一篇",
+                url: "https://tenant.feishu.cn/docx/doxcn-a",
+                latest_modify_time: "1700000001",
+              },
+            ],
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getDocumentMetadata } = await import("./lark");
+
+    await expect(
+      getDocumentMetadata(ENV, ["doxcn-a", "doxcn-b"]),
+    ).resolves.toEqual({
+      "doxcn-a": {
+        documentId: "doxcn-a",
+        title: "第一篇",
+        url: "https://tenant.feishu.cn/docx/doxcn-a",
+        latestModifiedAt: 1700000001,
+      },
+      "doxcn-b": {
+        documentId: "doxcn-b",
+        title: "第二篇",
+        url: "https://tenant.feishu.cn/docx/doxcn-b",
+        latestModifiedAt: 1700000002,
+      },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "https://open.feishu.cn/open-apis/drive/v1/metas/batch_query",
+    );
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+      method: "POST",
+      headers: {
+        Authorization: "Bearer tenant-token",
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    });
+    expect(
+      JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body)),
+    ).toEqual({
+      request_docs: [
+        { doc_token: "doxcn-a", doc_type: "docx" },
+        { doc_token: "doxcn-b", doc_type: "docx" },
+      ],
+      with_url: true,
+    });
+  });
+
+  it("元数据读取遇到 HTTP 503 时按 safe 策略只重试一次", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(new Response("private metadata response", { status: 503 }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            metas: [
+              {
+                request_doc_info: { doc_token: "doxcn-test" },
+                title: "元数据",
+                url: "https://tenant.feishu.cn/docx/doxcn-test",
+                latest_modify_time: "1700000000",
+              },
+            ],
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getDocumentMetadata } = await import("./lark");
+
+    await expect(getDocumentMetadata(ENV, ["doxcn-test"])).resolves.toMatchObject(
+      {
+        "doxcn-test": { latestModifiedAt: 1700000000 },
+      },
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token",
+    });
+    expect(fetchMock.mock.calls[2][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token",
+    });
+  });
+
+  it("元数据响应缺少请求中的文档时返回脱敏错误", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            metas: [
+              {
+                request_doc_info: { doc_token: "doxcn-a" },
+                title: "第一篇",
+                url: "https://tenant.feishu.cn/docx/doxcn-a",
+                latest_modify_time: "1700000001",
+              },
+            ],
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getDocumentMetadata } = await import("./lark");
+
+    const promise = getDocumentMetadata(ENV, ["doxcn-a", "doxcn-b"]);
+    await expect(promise).rejects.toMatchObject({ kind: "remote-error" });
+    await expect(promise).rejects.not.toThrow(/第一篇/);
+  });
+
+  it.each([
+    ["request_doc_info", (metadata: Record<string, unknown>) => {
+      delete metadata.request_doc_info;
+    }],
+    ["title", (metadata: Record<string, unknown>) => {
+      delete metadata.title;
+    }],
+    ["url", (metadata: Record<string, unknown>) => {
+      delete metadata.url;
+    }],
+    ["latest_modify_time", (metadata: Record<string, unknown>) => {
+      delete metadata.latest_modify_time;
+    }],
+  ])("元数据响应缺少 %s 时返回脱敏错误", async (_field, removeField) => {
+    const metadata: Record<string, unknown> = {
+      request_doc_info: { doc_token: "doxcn-test" },
+      title: "元数据",
+      url: "https://tenant.feishu.cn/docx/doxcn-test",
+      latest_modify_time: "1700000000",
+    };
+    removeField(metadata);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ code: 0, data: { metas: [metadata] } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getDocumentMetadata } = await import("./lark");
+
+    await expect(
+      getDocumentMetadata(ENV, ["doxcn-test"]),
+    ).rejects.toMatchObject({ kind: "remote-error" });
+  });
+
+  it("元数据非零业务码清 token,下一次操作重新获取", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token-1",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ code: 99991663, msg: "private metadata detail" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token-2",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            metas: [
+              {
+                request_doc_info: { doc_token: "doxcn-test" },
+                title: "元数据",
+                url: "https://tenant.feishu.cn/docx/doxcn-test",
+                latest_modify_time: "1700000000",
+              },
+            ],
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getDocumentMetadata } = await import("./lark");
+
+    const first = getDocumentMetadata(ENV, ["doxcn-test"]);
+    await expect(first).rejects.toMatchObject({ kind: "remote-error" });
+    await expect(first).rejects.not.toThrow(/private metadata detail/);
+    await expect(
+      getDocumentMetadata(ENV, ["doxcn-test"]),
+    ).resolves.toMatchObject({ "doxcn-test": { documentId: "doxcn-test" } });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token-1",
+    });
+    expect(fetchMock.mock.calls[3][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token-2",
+    });
+  });
+
+  it("元数据读取 401 清 token,下一次操作重新获取", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token-1",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(new Response("expired token", { status: 401 }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          tenant_access_token: "tenant-token-2",
+          expire: 7200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            metas: [
+              {
+                request_doc_info: { doc_token: "doxcn-test" },
+                title: "元数据",
+                url: "https://tenant.feishu.cn/docx/doxcn-test",
+                latest_modify_time: "1700000000",
+              },
+            ],
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const { getDocumentMetadata } = await import("./lark");
+
+    const first = getDocumentMetadata(ENV, ["doxcn-test"]);
+    await expect(first).rejects.toMatchObject({ kind: "http", status: 401 });
+    await expect(
+      getDocumentMetadata(ENV, ["doxcn-test"]),
+    ).resolves.toMatchObject({ "doxcn-test": { documentId: "doxcn-test" } });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token-1",
+    });
+    expect(fetchMock.mock.calls[3][1]?.headers).toMatchObject({
+      Authorization: "Bearer tenant-token-2",
+    });
+  });
 });
 
 describe("飞书 Docs 文本写入", () => {

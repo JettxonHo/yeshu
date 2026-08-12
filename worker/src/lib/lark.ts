@@ -14,6 +14,13 @@ export interface CreatedDocument {
   title: string;
 }
 
+export interface DocumentMetadata {
+  documentId: string;
+  title: string;
+  url: string;
+  latestModifiedAt: number;
+}
+
 // token 缓存(Worker 实例内复用;实例不保证持久,过期会重换)
 let cachedToken: { token: string; exp: number } | null = null;
 
@@ -148,6 +155,96 @@ export async function getDocumentRawContent(
     }
     if (typeof data.data?.content !== "string") throw feishuRemoteError();
     return data.data.content;
+  } catch (error) {
+    if (error instanceof ExternalHttpError && error.status === 401)
+      cachedToken = null;
+    throw error;
+  }
+}
+
+/** 批量读取文档元数据。该接口虽使用 POST,但只读请求允许安全重试。 */
+export async function getDocumentMetadata(
+  env: Env,
+  documentIds: readonly string[],
+): Promise<Record<string, DocumentMetadata>> {
+  const token = await getTenantToken(env);
+  try {
+    const data = await fetchJsonWithPolicy<{
+      code?: unknown;
+      data?: { metas?: unknown };
+    }>(
+      `${FEISHU_BASE}/open-apis/drive/v1/metas/batch_query`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          request_docs: documentIds.map((documentId) => ({
+            doc_token: documentId,
+            doc_type: "docx",
+          })),
+          with_url: true,
+        }),
+      },
+      {
+        service: "feishu",
+        retry: "safe",
+      },
+    );
+    if (data.code !== 0) {
+      cachedToken = null;
+      throw feishuRemoteError();
+    }
+
+    const metas = data.data?.metas;
+    if (!Array.isArray(metas)) throw feishuRemoteError();
+
+    const result: Record<string, DocumentMetadata> = {};
+    for (const item of metas) {
+      if (typeof item !== "object" || item === null) {
+        throw feishuRemoteError();
+      }
+      const metadata = item as Record<string, unknown>;
+      const requestDocInfo = metadata.request_doc_info;
+      if (
+        typeof requestDocInfo !== "object" ||
+        requestDocInfo === null
+      ) {
+        throw feishuRemoteError();
+      }
+      const documentId = (requestDocInfo as Record<string, unknown>).doc_token;
+      const title = metadata.title;
+      const url = metadata.url;
+      const latestModifyTime = metadata.latest_modify_time;
+      const latestModifiedAt =
+        typeof latestModifyTime === "string"
+          ? Number(latestModifyTime)
+          : latestModifyTime;
+      if (
+        typeof documentId !== "string" ||
+        typeof title !== "string" ||
+        typeof url !== "string" ||
+        typeof latestModifiedAt !== "number" ||
+        !Number.isFinite(latestModifiedAt)
+      ) {
+        throw feishuRemoteError();
+      }
+      result[documentId] = {
+        documentId,
+        title,
+        url,
+        latestModifiedAt,
+      };
+    }
+
+    for (const documentId of documentIds) {
+      if (!Object.prototype.hasOwnProperty.call(result, documentId)) {
+        throw feishuRemoteError();
+      }
+    }
+    return result;
   } catch (error) {
     if (error instanceof ExternalHttpError && error.status === 401)
       cachedToken = null;
