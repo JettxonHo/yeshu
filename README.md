@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-项目处于 Reliability Hardening，尚未进入 V2-b。工程、生产、行为验证三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
+项目已进入 V2-b 工程开发，生产仍运行 V2-a，行为验证继续收集。三轴状态见 [docs/STATUS.md](docs/STATUS.md)，当前 Goal 见 [GOAL.md](GOAL.md)。
 
 ## 开发入口
 
