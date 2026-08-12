@@ -206,7 +206,7 @@
   - [x] P0 选择算法(§5.3:延期 P0 优先)
   - [x] `.github/workflows/wednesday-check.yml`:cron `0 12 * * 3`(UTC)= 周三北京 20:00
   - [x] 体检卡片工程实现(进度 + Doing 3 天没动提醒)
-  - [ ] 从 main 真实触发 daily/wednesday workflow,确认飞书收到正确卡片并保存截图
+  - [x] 从 main 真实触发 daily/wednesday workflow,确认飞书收到卡片并保存脱敏截图(2026-08-12;runs `31554628778` / `31554630892`;当时数据仅覆盖空 P0 / 无 Stuck / 无 Doing 超时路径)
   - [ ] 四步走验证
   - [ ] **V2 成功标准(spec §14.1):66 天按钮完成 ≥ 30 次**(与 Phase 3 合并,跨期累积)
 - **涉及文件**:`scripts/analyze.py`、`.github/workflows/wednesday-check.yml`、`scripts/build_card.py`(体检卡)
@@ -218,7 +218,7 @@
 - **依赖**:Phase 3
 - **测试**:`act` 跑 wednesday-check;构造 Stuck 测试数据
 - **工作量**:3–5 天
-- **状态**:⏳ Engineering complete / Human validation pending。Issue #23 已关闭,PR #24 已合并为 `main@4b8c6df`;真实 Actions/飞书 E2E、截图与 66 天行为门槛未完成,因此 Phase 不标 ✅。
+- **状态**:⏳ Engineering complete / Actions E2E complete / Behavior gate pending。Issue #23 已关闭,PR #24 已合并为 `main@4b8c6df`;2026-08-12 已完成真实 Actions→飞书空态路径与截图。V2-a 上线仅 11 天且没有可证明“按钮完成 ≥30 次”的持久化计数,因此 66 天行为门槛未完成,Phase 不标 ✅。
 
 ---
 
@@ -321,12 +321,12 @@
 
 ## 6. 下一步
 
-当前路由:**Phase 4 · V2-b 人工验证**。后续按序执行,不跳步:
+当前路由:**Phase 4 · V2-b 行为观察窗口**。后续按序执行,不跳步:
 
 1. **V2-b 工程已完成**:Issue #23 / PR #24 已合并,Python 17 项与 Worker 293 项测试、独立审查、CI 双绿;
 2. **幂等生产启用单独推进**:等待用户决定,之后人工准备 Tablestore / 最小权限 RAM 身份,隔离环境验证后只从 main 部署并做生产重投验证(运行手册见 `docs/runbooks/idempotency-tablestore.md`);
 3. **Branch Protection 单独决策**:GitHub 当前未强制 required checks,未经用户确认不修改仓库设置;
 4. **克制处理其余旧债务**:WIP 原子锁、daily-push TypeScript 重写、Encrypt Key 暂缓,除非出现真实故障/规模证据或用户改变优先级;
-5. **完成 V2-b 后才进入 V3**:当前只剩真实 daily/wednesday Actions→飞书验证、截图和行为门槛(66 天按钮完成 ≥ 30,spec §14.1);全部闭环后才允许进入 Phase 5(V3-a)。
+5. **完成 V2-b 后才进入 V3**:真实 daily/wednesday Actions→飞书验证与截图已于 2026-08-12 完成;当前只剩行为门槛(66 天按钮完成 ≥ 30,spec §14.1)。观察窗口最早于 2026-10-06 结束,且当前没有按钮完成计数证据;闭环前不进入 Phase 5(V3-a)。
 
 *DEV-PLAN 结束。所有执行以此为据,产品决策以 Product-Spec.md 为据。*
